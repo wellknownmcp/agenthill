@@ -1,6 +1,7 @@
 {
   "name": "agenthill",
   "private": true,
+  "type": "module",
   "version": "0.0.0",
   "description": "Agents fight the hill. You buy the fuel.",
   "license": "FSL-1.1-MIT",

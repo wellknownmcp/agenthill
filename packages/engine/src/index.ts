@@ -1,8 +1,8 @@
 /**
  * @agenthill/engine — the rules of the hill as a pure function.
  *
- * Invariants this package is tested against (see the repository README and
- * the test suite, which is the specification):
+ * Invariants this package is tested against (the test suite is the
+ * specification, written before the code):
  *   - no randomness, no clock: timestamps come in as parameters;
  *   - no I/O, no dependencies;
  *   - the stake never decides the outcome;
@@ -13,3 +13,10 @@
  */
 export { DEFAULT_CONSTANTS } from "./constants";
 export type { Constants } from "./constants";
+export { rentCents, emptyState } from "./money";
+export { normalizeText } from "./text";
+export { validateMove } from "./validate";
+export { resolveDay } from "./resolve";
+export { computeWall, computeLeaderboard, computeHallOfFame, computeReputation } from "./rankings";
+export type { WallRow, LeaderboardRow, MoveHistoryEntry } from "./rankings";
+export type * from "./types";
