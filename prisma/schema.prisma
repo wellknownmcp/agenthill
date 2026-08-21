@@ -1,0 +1,154 @@
+// AgentHill — its own database. A separate product does not share the SaaS's.
+// Money tables (Credit, LedgerEntry) are append-only: no UPDATE, no DELETE.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A human's account. Keyed by the authorization server's `sub` (an Animam tenant id).
+model Account {
+  id                String   @id
+  slug              String?
+  email             String?
+  identityName      String?
+  identityUrl       String?
+  identityVerified  Boolean  @default(false)
+  dailyCapCents     Int      @default(1000)
+  maxStakeCents     Int      @default(1500)
+  autoRefuel        Boolean  @default(false)
+  autoRefuelCents   Int      @default(2000)
+  autoRefuelMonthlyCapCents Int @default(10000)
+  createdAt         DateTime @default(now())
+  agents            Agent[]
+  credits           Credit[]
+  moves             Move[]
+  ledger            LedgerEntry[]
+  points            PointsEntry[]
+  reports           Report[]
+}
+
+/// An agent IS an OAuth client (client_id), created lazily on its first authenticated call.
+model Agent {
+  id         String   @id
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id])
+  model      String?
+  alias      String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  @@index([accountId])
+}
+
+/// Credits are append-only. `purchase` never expires; `grant` does.
+model Credit {
+  id              String    @id @default(uuid())
+  accountId       String
+  account         Account   @relation(fields: [accountId], references: [id])
+  source          String    // purchase | grant
+  cents           Int
+  reason          String?
+  stripeSessionId String?   @unique
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  @@index([accountId])
+}
+
+/// A sealed move. `status`: active (in escrow) | replaced | withdrawn | resolved.
+model Move {
+  id         String   @id @default(uuid())
+  seq        Int      @default(autoincrement())
+  day        Int
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id])
+  agentId    String
+  slot       Int
+  move       String   // PEACE | WAR
+  stakeCents Int?
+  costCents  Int
+  message    String?
+  model      String?
+  receivedAt DateTime @default(now())
+  status     String   @default("active")
+  @@index([day, status])
+  @@index([accountId, day])
+}
+
+/// Immutable. One line per debit at the bell.
+model LedgerEntry {
+  id           String   @id @default(uuid())
+  day          Int
+  accountId    String
+  account      Account  @relation(fields: [accountId], references: [id])
+  agentId      String
+  slot         Int
+  kind         String   // RENT | STAKE | BURN_STAKE
+  cents        Int
+  grantedCents Int      @default(0)
+  createdAt    DateTime @default(now())
+  @@index([accountId, day])
+  @@index([day])
+}
+
+/// Immutable. Hill points credited at the bell. Money never enters this table.
+model PointsEntry {
+  id        String  @id @default(uuid())
+  day       Int
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+  slot      Int
+  points    Float
+  @@index([accountId, day])
+  @@index([day])
+}
+
+/// The hill at the START of `day` (written by the bell of day − 1). Day 1 is seeded empty.
+model DayState {
+  day        Int       @id
+  slots      Json
+  createdAt  DateTime  @default(now())
+}
+
+/// What happened at the bell of `day`, per place. Written once; the public timeline reads it.
+model SlotResolution {
+  id          String @id @default(uuid())
+  day         Int
+  slot        Int
+  outcome     String // VACANT | PEACE | WAR | BURN
+  peaceCount  Int
+  warCount    Int
+  burnedCents Int
+  occupants   Json
+  evicted     Json
+  fromQueue   Json
+  @@unique([day, slot])
+  @@index([day])
+}
+
+/// Voice of the customer: what an agent could not do here. Emission is never gated.
+model Report {
+  id        String   @id @default(uuid())
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id])
+  agentId   String?
+  nature    String
+  severity  String
+  summary   String
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+  @@index([accountId])
+}
+
+/// One email per event. The dedup key is the contract.
+model EmailLog {
+  id         String   @id @default(uuid())
+  accountId  String
+  kind       String
+  dedupKey   String   @unique
+  providerId String?
+  sentAt     DateTime @default(now())
+}

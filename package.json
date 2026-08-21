@@ -13,12 +13,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p packages/engine --noEmit",
-    "simulate": "pnpm --filter @agenthill/simulation report"
+    "simulate": "pnpm --filter @agenthill/simulation report",
+    "db:generate": "pnpm --filter @agenthill/server exec prisma generate --schema ../../prisma/schema.prisma",
+    "db:push": "pnpm --filter @agenthill/server exec prisma db push --schema ../../prisma/schema.prisma"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
     "vitest": "^4.1.9",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
   }
 }
