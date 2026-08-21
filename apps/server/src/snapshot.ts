@@ -5,7 +5,7 @@
 import { computeLeaderboard, computeWall, type AccountInfo, type PointsEntry, type LedgerEntry } from "@agenthill/engine";
 import { prisma } from "./db";
 import { C, loadState } from "./state";
-import { dayIndex, nextBellAt } from "./day";
+import { dayIndex, nextBellAt, beforeLaunch, firstBellAt } from "./day";
 import { env } from "./env";
 
 export interface IdentityView {
@@ -24,6 +24,7 @@ export interface SnapshotPlace {
 
 export interface DaySnapshot {
   day: number;
+  beforeLaunch: boolean;
   nextBellAt: string;
   generatedAt: string;
   hill: SnapshotPlace[];
@@ -74,9 +75,11 @@ export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
   const idv = await identities([...ids]);
   const view = (id: string): IdentityView => idv.get(id) ?? { accountId: id, name: "unnamed", url: null, verified: false, slug: null };
 
+  const pre = beforeLaunch(now, env.launchDate);
   return {
     day,
-    nextBellAt: nextBellAt(now).toISOString(),
+    beforeLaunch: pre,
+    nextBellAt: (pre ? firstBellAt(env.launchDate) : nextBellAt(now)).toISOString(),
     generatedAt: now.toISOString(),
     hill: state.slots.map((s, i) => ({
       slot: i + 1,

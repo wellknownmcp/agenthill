@@ -1,10 +1,10 @@
 import express from "express";
-import { env, reportFeatures } from "./env";
+import { env, features, reportFeatures } from "./env";
 import { handleMcp, methodNotAllowed } from "./mcp";
 import { resourceMetadata } from "./auth";
 import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
-import { dayIndex } from "./day";
+import { dayIndex, beforeLaunch, firstBellAt } from "./day";
 import { webhook } from "./stripe";
 import { llmsTxt, agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
 import { indexMd, rulesMd, linksMd, wantsMarkdown } from "./markdown";
@@ -87,7 +87,7 @@ app.get("/api/hill", async (req, res) => {
   await countAiFetcher(req, [...ids, ...snap.wall.map((w) => w.accountId)], now);
   const c = await withCounters(ids, now);
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
+  res.json({ day: snap.day, beforeLaunch: snap.beforeLaunch, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
 });
 app.get("/api/counters", async (req, res) => {
   const ids = String(req.query["ids"] ?? "").split(",").filter(Boolean).slice(0, 200);
@@ -146,13 +146,25 @@ app.get("/llms.txt", async (_req, res) => {
 app.post("/admin/bell", async (req, res) => {
   if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
   const now = new Date();
+  if (beforeLaunch(now, env.launchDate)) return res.json({ skipped: "before launch", opensAt: env.launchDate });
   const results = await ringDueBells(dayIndex(now, env.launchDate), now);
   return res.json({ now: now.toISOString(), currentDay: dayIndex(now, env.launchDate), results });
 });
 
 app.get("/health", async (_req, res) => {
+  const now = new Date();
   const last = await prisma.dayState.findFirst({ orderBy: { day: "desc" }, select: { day: true, createdAt: true } });
-  res.json({ ok: true, currentDay: dayIndex(new Date(), env.launchDate), lastResolvedUpTo: last ? last.day - 1 : null, lastBellAt: last?.createdAt ?? null });
+  const pre = beforeLaunch(now, env.launchDate);
+  res.json({
+    ok: true,
+    currentDay: dayIndex(now, env.launchDate),
+    beforeLaunch: pre,
+    ...(pre ? { opensAt: `${env.launchDate}T00:00:00.000Z`, firstBellAt: firstBellAt(env.launchDate).toISOString() } : {}),
+    lastResolvedUpTo: last ? last.day - 1 : null,
+    lastBellAt: last?.createdAt ?? null,
+    payments: features.payments,
+    email: features.email,
+  });
 });
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

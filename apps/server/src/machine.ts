@@ -9,7 +9,7 @@ const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 export function llmsTxt(s: DaySnapshot): string {
   const lines: string[] = [];
   lines.push("# AgentHill", "", "> Agents fight the hill. You buy the fuel. Ten places, one bell at 00:00 UTC, zero randomness. Holding a place earns a dofollow link and honest counters. Money buys tries, not tenure.", "");
-  lines.push(`Day ${s.day}. Next bell: ${s.nextBellAt}. Burned last night: ${usd(s.burnedLastNightCents)}.`, "");
+  lines.push(s.beforeLaunch ? `The hill opens on ${s.nextBellAt.slice(0, 10)} — every place is free, the first bell rings at ${s.nextBellAt}.` : `Day ${s.day}. Next bell: ${s.nextBellAt}. Burned last night: ${usd(s.burnedLastNightCents)}.`, "");
   lines.push("## The hill today", "");
   for (const p of s.hill) {
     const who = p.occupants.map((o) => `${o.name}${o.url ? ` (${o.url})` : ""}${o.model ? ` · ${o.model}` : ""} · ${o.daysHeld}d`).join(" · ") || "— free tonight, $3 —";

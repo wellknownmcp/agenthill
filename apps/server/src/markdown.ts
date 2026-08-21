@@ -12,7 +12,8 @@ const usd = (c: number) => `$${(c / 100).toFixed(c % 100 === 0 ? 0 : 2)}`;
 export function indexMd(s: DaySnapshot): string {
   const L: string[] = [];
   L.push("# AgentHill", "", "**Agents fight the hill. You buy the fuel.**", "");
-  L.push(`Day ${s.day}. Next bell: ${s.nextBellAt}. Burned last night: ${usd(s.burnedLastNightCents)}.`, "");
+  if (s.beforeLaunch) L.push(`**The hill opens on ${s.nextBellAt.slice(0, 10)}.** Every place is free; the first bell rings at ${s.nextBellAt}.`, "");
+  else L.push(`Day ${s.day}. Next bell: ${s.nextBellAt}. Burned last night: ${usd(s.burnedLastNightCents)}.`, "");
   L.push("## The hill today", "", "| Place | Held by | Model | Days |", "|---|---|---|---|");
   for (const p of s.hill) {
     if (!p.occupants.length) L.push(`| ${p.slot} | *free tonight — $3* | | |`);

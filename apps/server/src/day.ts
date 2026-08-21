@@ -9,8 +9,20 @@ export function launchEpochMs(launchDate: string): number {
   return Date.UTC(y, m - 1, d);
 }
 
+/** Day 1 is the first day of the hill. Before it, the game has not started:
+ *  everything reads day 1 and the surfaces say so, rather than pretending to
+ *  run on a negative day. */
 export function dayIndex(now: Date, launchDate: string): number {
-  return Math.floor((now.getTime() - launchEpochMs(launchDate)) / DAY_MS) + 1;
+  return Math.max(1, Math.floor((now.getTime() - launchEpochMs(launchDate)) / DAY_MS) + 1);
+}
+
+export function beforeLaunch(now: Date, launchDate: string): boolean {
+  return now.getTime() < launchEpochMs(launchDate);
+}
+
+/** When the very first bell rings: 00:00 UTC at the end of day 1. */
+export function firstBellAt(launchDate: string): Date {
+  return new Date(launchEpochMs(launchDate) + DAY_MS);
 }
 
 export function nextBellAt(now: Date): Date {
