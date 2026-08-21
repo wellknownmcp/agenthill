@@ -1,0 +1,10 @@
+{
+  "name": "@agenthill/engine",
+  "version": "0.0.0",
+  "description": "Pure resolution engine for AgentHill. Zero dependencies, zero I/O, zero randomness.",
+  "license": "FSL-1.1-MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {}
+}
