@@ -5,13 +5,13 @@
  */
 import Stripe from "stripe";
 import type { Request, Response } from "express";
-import { env } from "./env";
+import { env, features } from "./env";
 import { prisma } from "./db";
 
 let client: Stripe | null = null;
 function stripe(): Stripe {
   if (!client) {
-    if (!env.stripeSecretKey) throw new Error("Stripe is not configured");
+    if (!features.payments) throw new Error("Stripe is not configured on this server");
     client = new Stripe(env.stripeSecretKey, { apiVersion: "2025-08-27.basil" as Stripe.LatestApiVersion });
   }
   return client;
@@ -45,6 +45,7 @@ export async function createCheckout(accountId: string, amountCents: number): Pr
 }
 
 export async function webhook(req: Request, res: Response) {
+  if (!features.payments) return res.status(503).json({ error: "payments_not_configured" });
   const sig = req.headers["stripe-signature"];
   if (!sig || typeof sig !== "string") return res.status(400).send("missing signature");
   let event: Stripe.Event;

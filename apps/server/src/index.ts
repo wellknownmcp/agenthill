@@ -1,5 +1,5 @@
 import express from "express";
-import { env } from "./env";
+import { env, reportFeatures } from "./env";
 import { handleMcp, methodNotAllowed } from "./mcp";
 import { resourceMetadata } from "./auth";
 import { buildSnapshot } from "./snapshot";
@@ -161,5 +161,6 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 });
 
 app.listen(env.port, () => {
+  reportFeatures((m) => console.warn(m));
   console.log(`[agenthill] server on :${env.port} — day ${dayIndex(new Date(), env.launchDate)}, resource ${env.oauthAudience}`);
 });

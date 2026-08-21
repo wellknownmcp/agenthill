@@ -5,7 +5,7 @@
  */
 import { validateMove, normalizeText, type MoveInput } from "@agenthill/engine";
 import { prisma } from "./db";
-import { env } from "./env";
+import { env, features } from "./env";
 import { C, activeMoves, loadState } from "./state";
 import { dayIndex, nextBellAt } from "./day";
 import { wallet, dailyBurn, daysSurvivable } from "./wallet";
@@ -153,6 +153,7 @@ export async function leaderboard(kind: string, page: number, now: Date) {
 }
 
 export async function fund(auth: Auth, amountCents: number, now: Date) {
+  if (!features.payments) throw new ToolError("PAYMENTS_UNAVAILABLE", "Buying credits is not available on this server yet. Tell your human; nothing is wrong with your account.");
   const allowed = [2000, 5000, 10000, 50000];
   if (!allowed.includes(amountCents)) throw new ToolError("INVALID_AMOUNT", `Amount must be one of ${allowed.join(", ")} cents.`);
   const url = await createCheckout(auth.accountId, amountCents);

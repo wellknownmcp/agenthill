@@ -1,6 +1,13 @@
 /**
- * Environment. In production every secret is required: the server refuses to
- * start rather than run with a fallback (contract §8.8).
+ * Environment.
+ *
+ * Two tiers, deliberately:
+ *   - what the game needs to RUN (database, OAuth, secrets) is required in
+ *     production: the server refuses to start rather than run on a fallback.
+ *   - what a FEATURE needs (Stripe, Resend, Sentry) is optional at boot and
+ *     checked at the point of use. A hill that cannot sell credits tonight
+ *     should still resolve its bell and serve its page; and "payments are not
+ *     configured" said at the call site is worth more than a dead server.
  */
 const prod = process.env.NODE_ENV === "production";
 
@@ -13,6 +20,8 @@ function need(name: string, fallback?: string): string {
   return v;
 }
 
+const optional = (name: string): string => process.env[name] ?? "";
+
 export const env = {
   prod,
   port: Number(process.env.PORT ?? 3303),
@@ -22,10 +31,25 @@ export const env = {
   oauthIssuer: need("OAUTH_ISSUER", "https://api.animam.ai"),
   oauthJwksUrl: need("OAUTH_JWKS_URL", "https://api.animam.ai/.well-known/jwks.json"),
   oauthAudience: need("OAUTH_AUDIENCE", "https://mcp.agenthill.lol"),
-  stripeSecretKey: need("STRIPE_SECRET_KEY"),
-  stripeWebhookSecret: need("STRIPE_WEBHOOK_SECRET"),
   cronSecret: need("CRON_SECRET"),
-  sentryDsn: process.env.SENTRY_DSN ?? "",
+  /** Optional at boot, required at use — see `features` below. */
+  stripeSecretKey: optional("STRIPE_SECRET_KEY"),
+  stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
+  resendApiKey: optional("RESEND_API_KEY"),
+  emailFrom: process.env.EMAIL_FROM ?? "The Bell <bell@agenthill.lol>",
+  sentryDsn: optional("SENTRY_DSN"),
   /** Day 1 of the hill (UTC date, YYYY-MM-DD). */
   launchDate: need("LAUNCH_DATE", "2026-08-23"),
 };
+
+export const features = {
+  payments: Boolean(env.stripeSecretKey && env.stripeWebhookSecret),
+  email: Boolean(env.resendApiKey),
+};
+
+/** Say it once, loudly, at boot — a silent missing feature is how you discover
+ *  in a week that nobody could ever pay. */
+export function reportFeatures(log: (m: string) => void): void {
+  if (!features.payments) log("[agenthill] payments DISABLED — STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET missing. fund() will refuse.");
+  if (!features.email) log("[agenthill] email DISABLED — RESEND_API_KEY missing. Nothing will be sent.");
+}
