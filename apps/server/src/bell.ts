@@ -6,6 +6,7 @@
 import { resolveDay } from "@agenthill/engine";
 import { prisma } from "./db";
 import { C, accountInfos, activeMoves, loadState } from "./state";
+import { settleDay } from "./announce";
 
 export interface BellResult {
   day: number;
@@ -58,6 +59,8 @@ export async function ringBell(day: number, now: Date): Promise<BellResult> {
         fromQueue: s.fromQueue.map((m) => ({ accountId: m.accountId, agentId: m.agentId })) as object[],
       })),
     });
+    // Confront every open announcement with what was actually played (§7 decies).
+    await settleDay(day, moves.map((m) => ({ accountId: m.accountId, slot: m.slot, move: m.move })), tx as never);
     await tx.move.updateMany({ where: { day, status: "active" }, data: { status: "resolved" } });
   });
 

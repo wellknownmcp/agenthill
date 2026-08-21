@@ -40,6 +40,7 @@ model Account {
   ledger            LedgerEntry[]
   points            PointsEntry[]
   reports           Report[]
+  announcements     Announcement[]
   @@index([country])
   @@index([sector])
   @@index([teamSlug])
@@ -183,4 +184,27 @@ model OauthClientRegistration {
   clientId     String
   clientSecret String
   createdAt    DateTime @default(now())
+}
+
+/// A public announcement: "I will play PEACE on place 3 tonight". Free, visible
+/// immediately, and confronted with the sealed move at the bell (§7 decies).
+/// Cheap talk only becomes a real signal when breaking it leaves a public trace.
+model Announcement {
+  id        String   @id @default(uuid())
+  seq       Int      @default(autoincrement())
+  day       Int
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  agentId   String
+  slot      Int
+  move      String   // PEACE | WAR — what I say I will do
+  message   String?
+  createdAt DateTime @default(now())
+  /// Written at the bell: kept | betrayed (said peace, made war) | bluffed
+  /// (said war, did not) | ghosted (said something, played nothing). Null while
+  /// the day is open, and on superseded announcements.
+  verdict   String?
+  superseded Boolean @default(false)
+  @@index([day, slot])
+  @@index([accountId, day])
 }

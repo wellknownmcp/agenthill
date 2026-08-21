@@ -6,7 +6,8 @@ import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
 import { dayIndex } from "./day";
 import { webhook } from "./stripe";
-import { llmsTxt, agentCard, mcpManifest } from "./machine";
+import { llmsTxt, agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
+import { indexMd, rulesMd, linksMd, wantsMarkdown } from "./markdown";
 import { prisma } from "./db";
 import { counters, seen, visitorHash } from "./metrics";
 import { dayIndex as dayOf } from "./day";
@@ -25,9 +26,41 @@ app.get("/mcp", methodNotAllowed);
 app.delete("/mcp", methodNotAllowed);
 
 // ── Discovery (RFC 9728, A2A, MCP manifest) ─────────────────────────────────
+const machine = (res: express.Response) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=300");
+};
 app.get("/.well-known/oauth-protected-resource", (_req, res) => res.json(resourceMetadata()));
-app.get("/.well-known/agent.json", (_req, res) => res.json(agentCard()));
-app.get("/.well-known/mcp.json", (_req, res) => res.json(mcpManifest()));
+app.get("/.well-known/agent.json", (_req, res) => { machine(res); res.json(agentCard()); });
+app.get("/.well-known/agent-card.json", (_req, res) => { machine(res); res.json(agentCard()); });
+app.get("/.well-known/mcp.json", (_req, res) => { machine(res); res.json(mcpManifest()); });
+app.get("/.well-known/mcp-server.json", (_req, res) => { machine(res); res.json(mcpServerCard()); });
+app.get("/.well-known/api-catalog", (_req, res) => { machine(res); res.type("application/linkset+json").json(apiCatalog()); });
+app.get("/.well-known/agent-skills/index.json", (_req, res) => { machine(res); res.json(agentSkills()); });
+app.get("/.well-known/security.txt", (_req, res) => { machine(res); res.type("text/plain; charset=utf-8").send(securityTxt()); });
+app.get("/openapi.json", (_req, res) => { machine(res); res.json(openapi()); });
+
+// ── Markdown twins: same source as the page, no HTML to parse ───────────────
+async function sendMarkdown(res: express.Response, body: string, snapAt?: string, bellAt?: string) {
+  if (snapAt && bellAt) cache(res, snapAt, bellAt);
+  else machine(res);
+  res.type("text/markdown; charset=utf-8").send(body);
+}
+app.get(["/index.md", "/home.md"], async (_req, res) => {
+  const snap = await buildSnapshot(new Date());
+  await sendMarkdown(res, indexMd(snap), snap.generatedAt, snap.nextBellAt);
+});
+app.get("/rules.md", (_req, res) => sendMarkdown(res, rulesMd()));
+app.get("/links.md", (_req, res) => sendMarkdown(res, linksMd()));
+/** Content negotiation on the human paths, before the page ever sees them. */
+app.get(["/", "/rules", "/links"], async (req, res, next) => {
+  if (!wantsMarkdown(req.headers.accept)) return next();
+  res.setHeader("Vary", "Accept");
+  if (req.path === "/rules") return sendMarkdown(res, rulesMd());
+  if (req.path === "/links") return sendMarkdown(res, linksMd());
+  const snap = await buildSnapshot(new Date());
+  return sendMarkdown(res, indexMd(snap), snap.generatedAt, snap.nextBellAt);
+});
 
 // ── Public read API — same DaySnapshot as the page, CORS open, cached until the bell
 function cache(res: express.Response, snapAt: string, bellAt: string) {
@@ -97,6 +130,11 @@ app.get("/api/day/:n", async (req, res) => {
   res.setHeader("Cache-Control", "public, max-age=86400, immutable");
   res.setHeader("Access-Control-Allow-Origin", "*");
   return res.json({ day: n, slots: rows.map((r) => ({ slot: r.slot, outcome: r.outcome, peaceCount: r.peaceCount, warCount: r.warCount, burnedCents: r.burnedCents, occupants: r.occupants, evicted: r.evicted, fromQueue: r.fromQueue })) });
+});
+app.get("/llms-full.txt", async (_req, res) => {
+  const snap = await buildSnapshot(new Date());
+  cache(res, snap.generatedAt, snap.nextBellAt);
+  res.type("text/plain; charset=utf-8").send([llmsTxt(snap), "", "---", "", rulesMd(), "", "---", "", linksMd()].join("\n"));
 });
 app.get("/llms.txt", async (_req, res) => {
   const snap = await buildSnapshot(new Date());

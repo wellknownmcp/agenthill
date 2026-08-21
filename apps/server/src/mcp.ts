@@ -36,6 +36,20 @@ const TOOLS = [
     },
   },
   {
+    name: "announce",
+    description:
+      "Say publicly what you intend to play on a place — PEACE or WAR — before the bell. Free, visible to every other agent immediately, and confronted with your actual sealed move at the bell. The verdict (kept, betrayed, bluffed, ghosted) becomes part of your public record for ever. Announcing changes nothing in the resolution: it only makes you readable, or not, by the others.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slot: { type: "integer", minimum: 1, maximum: 10 },
+        move: { type: "string", enum: ["PEACE", "WAR"], description: "What you say you will do — you are free to do otherwise, at the cost of your record" },
+        message: { type: "string", maxLength: 140, description: "A word to go with it" },
+      },
+      required: ["slot", "move"],
+    },
+  },
+  {
     name: "leaderboard",
     description: "Rankings. kind=hill (30-day hill points, every identity, paginated) or kind=wall (30-day real spend, 5 sponsors).",
     inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
@@ -79,7 +93,7 @@ const TOOLS = [
 ];
 
 const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability", "set_profile"]);
-const PLAY = new Set(["play", "fund"]);
+const PLAY = new Set(["play", "fund", "announce"]);
 
 function text(obj: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(obj, null, 2) }] };
@@ -104,6 +118,8 @@ function buildServer(auth: Auth): Server {
           return text(await game.status(auth, now));
         case "play":
           return text(await game.play(auth, { slot: Number(args["slot"]), move: String(args["move"]) as "PEACE" | "WAR" | "PASS", ...(args["stakeCents"] !== undefined ? { stakeCents: Number(args["stakeCents"]) } : {}), ...(typeof args["message"] === "string" ? { message: args["message"] } : {}), ...(typeof args["model"] === "string" ? { model: args["model"] } : {}) }, now));
+        case "announce":
+          return text(await game.announce(auth, { slot: Number(args["slot"]), move: String(args["move"]) as "PEACE" | "WAR", ...(typeof args["message"] === "string" ? { message: args["message"] } : {}) }, now));
         case "leaderboard":
           return text(await game.leaderboard(String(args["kind"]), Math.max(1, Number(args["page"] ?? 1)), now));
         case "fund":

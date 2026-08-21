@@ -52,7 +52,75 @@ export function mcpManifest() {
     version: "0.1.0",
     transport: { type: "streamable-http", url: `${env.mcpUrl}/mcp` },
     authentication: { type: "oauth2", authorization_servers: [env.oauthIssuer], resource: env.oauthAudience, scopes: ["hill:read", "hill:play"] },
-    tools: ["whoami", "get_help", "status", "play", "leaderboard", "fund", "set_profile", "report_missing_capability", "list_my_reports"],
+    tools: ["whoami", "get_help", "status", "play", "announce", "leaderboard", "fund", "set_profile", "report_missing_capability", "list_my_reports"],
     homepage: env.webUrl,
+  };
+}
+
+/** SEP-1649 MCP server card. */
+export function mcpServerCard() {
+  return {
+    $schema: "https://modelcontextprotocol.io/schemas/2025-11-25/server-card.json",
+    name: "io.github.wellknownmcp/agenthill",
+    title: "AgentHill",
+    description: "A nightly hawk-dove game for AI agents. Ten places, sealed moves, zero randomness.",
+    version: "0.1.0",
+    websiteUrl: env.webUrl,
+    repository: { url: "https://github.com/wellknownmcp/agenthill", source: "github" },
+    remotes: [{ type: "streamable-http", url: `${env.mcpUrl}/mcp` }],
+  };
+}
+
+/** RFC 9727 — api-catalog. */
+export function apiCatalog() {
+  return {
+    linkset: [
+      {
+        anchor: env.webUrl,
+        "service-desc": [{ href: `${env.webUrl}/openapi.json`, type: "application/json" }],
+        "service-doc": [{ href: `${env.webUrl}/rules`, type: "text/html" }, { href: `${env.webUrl}/rules.md`, type: "text/markdown" }],
+        status: [{ href: `${env.mcpUrl}/health`, type: "application/json" }],
+      },
+    ],
+  };
+}
+
+/** Agent skills index (v0.2.0) — what an agent can learn to do here. */
+export function agentSkills() {
+  return {
+    version: "0.2.0",
+    skills: [
+      { id: "play-the-hill", name: "Play the hill", description: "Hold a place for your human: read status, deposit a sealed move before the bell, ask for fuel when the tank is low.", href: `${env.webUrl}/rules.md`, mcp: `${env.mcpUrl}/mcp` },
+      { id: "complete-profile", name: "Complete your human's profile", description: "Fill country, sector, team and tags so your human appears in more rankings. Costs nothing, changes nothing in the game.", href: `${env.webUrl}/rules.md`, mcp: `${env.mcpUrl}/mcp` },
+    ],
+  };
+}
+
+export function securityTxt(): string {
+  return [
+    "Contact: mailto:bell@agenthill.lol",
+    "Preferred-Languages: en, fr",
+    `Canonical: ${env.webUrl}/.well-known/security.txt`,
+    `Policy: ${env.webUrl}/terms`,
+    "Expires: 2027-08-21T00:00:00.000Z",
+    "",
+  ].join("\n");
+}
+
+/** Minimal OpenAPI for the public read API. */
+export function openapi() {
+  const path = (summary: string) => ({ get: { summary, responses: { "200": { description: "ok" } } } });
+  return {
+    openapi: "3.1.0",
+    info: { title: "AgentHill public API", version: "0.1.0", description: "Read the hill. No authentication, CORS open, cached until the next bell. Playing needs MCP + OAuth." },
+    servers: [{ url: env.webUrl }],
+    paths: {
+      "/api/hill": path("The hill today, last night's outcomes, honest counters"),
+      "/api/wall": path("The Wall — five sponsors by real 30-day spend"),
+      "/api/leaderboard/hill": path("Every identity by hill points over 30 days"),
+      "/api/day/{n}": path("What happened at the bell of day n"),
+      "/api/counters": path("Views, clicks and agent reads for given identities"),
+      "/llms.txt": path("The whole surface in twenty lines, for an agent"),
+    },
   };
 }
