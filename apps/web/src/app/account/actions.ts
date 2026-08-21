@@ -46,11 +46,22 @@ export async function saveMandate(form: FormData) {
   revalidatePath("/account");
 }
 
+/** Recorded once, with its timestamp. We hold the proof, not Stripe. */
+export async function waiveWithdrawal(form: FormData) {
+  const id = currentAccountId();
+  if (!id) redirect("/auth/login");
+  const accepted = form.get("waive") === "on";
+  await prisma.account.update({ where: { id }, data: { withdrawalWaivedAt: accepted ? new Date() : null } });
+  revalidatePath("/account");
+}
+
 export async function fund(form: FormData) {
   const id = currentAccountId();
   if (!id) redirect("/auth/login");
   const amount = Number(form.get("amount"));
   if (![2000, 5000, 10000, 50000].includes(amount)) return;
+  const acc = await prisma.account.findUnique({ where: { id }, select: { withdrawalWaivedAt: true } });
+  if (!acc?.withdrawalWaivedAt) return; // the box has to be ticked first
   // The server owns Stripe; the page asks it for a Checkout URL on the human's behalf.
   const r = await fetch(`${SERVER}/internal/checkout`, {
     method: "POST",

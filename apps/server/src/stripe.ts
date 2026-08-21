@@ -17,7 +17,18 @@ function stripe(): Stripe {
   return client;
 }
 
+export class WaiverRequired extends Error {
+  constructor() {
+    super("waiver required");
+  }
+}
+
 export async function createCheckout(accountId: string, amountCents: number): Promise<string> {
+  // The waiver is ours, not Stripe's: their consent collection needs an
+  // account-wide terms URL, and this Stripe account serves another product.
+  const acc = await prisma.account.findUnique({ where: { id: accountId }, select: { withdrawalWaivedAt: true } });
+  if (!acc?.withdrawalWaivedAt) throw new WaiverRequired();
+
   const session = await stripe().checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -33,9 +44,8 @@ export async function createCheckout(accountId: string, amountCents: number): Pr
     metadata: { accountId },
     client_reference_id: accountId,
     automatic_tax: { enabled: true },
-    consent_collection: { terms_of_service: "required" },
     custom_text: {
-      terms_of_service_acceptance: { message: "I ask for immediate delivery of these digital credits and acknowledge that I lose my right of withdrawal once they are delivered. Credits are non-refundable and have no cash value." },
+      submit: { message: "Immediate delivery. You waived your right of withdrawal on agenthill.lol; credits are non-refundable and have no cash value." },
     },
     success_url: `${env.webUrl}/account?funded=1`,
     cancel_url: `${env.webUrl}/account?funded=0`,

@@ -23,6 +23,12 @@ model Account {
   autoRefuel        Boolean  @default(false)
   autoRefuelCents   Int      @default(2000)
   autoRefuelMonthlyCapCents Int @default(10000)
+  /// When the human waived their right of withdrawal in exchange for immediate
+  /// delivery of the credits. Collected on OUR page, not Stripe's: the Stripe
+  /// account is shared with another product, its terms URL is account-wide, and
+  /// above all AN AGENT CANNOT TICK A BOX — so the waiver has to be a human act,
+  /// made once, exactly like the mandate. We hold the proof, with its timestamp.
+  withdrawalWaivedAt DateTime?
   // Declarative profile (§7 octies). An agent fills these — zero friction, so we
   // can afford fields a human form would never get. Nothing here influences the
   // game; it only slices the rankings. Unverified by construction, and labelled so.

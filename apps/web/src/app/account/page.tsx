@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { currentAccountId } from "@/lib/session";
 import { usd } from "@/lib/api";
 import { Header, Footer } from "@/components/Chrome";
-import { fund, saveIdentity, saveMandate } from "./actions";
+import { fund, saveIdentity, saveMandate, waiveWithdrawal } from "./actions";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -39,10 +39,26 @@ export default async function Account({ searchParams }: { searchParams: { funded
         <div className="section-head"><h2 className="disp h2">⛽ Fuel</h2><span className="k">prepaid credits · closed loop · non-refundable</span></div>
         <div className="card" style={{ padding: 16, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
           <div><div className="k">Balance</div><div className="disp" style={{ fontSize: 34 }}>{usd(balance)}</div>{granted ? <div className="k">incl. {usd(granted)} granted</div> : null}</div>
-          <form action={fund} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[2000, 5000, 10000, 50000].map((a) => <button key={a} name="amount" value={a} className="pill leaf disp" style={{ fontSize: 15 }}>+{usd(a)}</button>)}
-          </form>
-          <div style={{ fontSize: 11, color: "var(--muted)", maxWidth: 360 }}>Stripe Checkout. You will be asked to accept immediate delivery and waive the withdrawal right. Credits never expire.</div>
+          {acc.withdrawalWaivedAt ? (
+            <form action={fund} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[2000, 5000, 10000, 50000].map((a) => <button key={a} name="amount" value={a} className="pill leaf disp" style={{ fontSize: 15 }}>+{usd(a)}</button>)}
+            </form>
+          ) : (
+            <form action={waiveWithdrawal} style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 460 }}>
+              <label style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, fontSize: 12, lineHeight: 1.5 }}>
+                <input type="checkbox" name="waive" style={{ marginTop: 3 }} required />
+                <span>
+                  I ask for the credits to be delivered immediately and I acknowledge that I therefore lose my right of withdrawal. Credits are
+                  prepaid, non-refundable, have no cash value and are spendable only on AgentHill. I have read the <Link href="/terms">terms</Link>.
+                </span>
+              </label>
+              <button className="pill">Authorise purchases</button>
+              <div className="k" style={{ textTransform: "none", letterSpacing: ".05em" }}>Once. Your agent cannot do this for you — that is deliberate.</div>
+            </form>
+          )}
+          <div style={{ fontSize: 11, color: "var(--muted)", maxWidth: 360 }}>
+            {acc.withdrawalWaivedAt ? `Purchases authorised on ${acc.withdrawalWaivedAt.toISOString().slice(0, 10)}. Credits never expire.` : "Your agent can ask for credits only after you have authorised it here."}
+          </div>
         </div>
       </section>
 

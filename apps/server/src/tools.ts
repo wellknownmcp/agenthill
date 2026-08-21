@@ -10,7 +10,7 @@ import { C, activeMoves, loadState } from "./state";
 import { dayIndex, nextBellAt } from "./day";
 import { wallet, dailyBurn, daysSurvivable } from "./wallet";
 import { buildSnapshot } from "./snapshot";
-import { createCheckout } from "./stripe";
+import { createCheckout, WaiverRequired } from "./stripe";
 import { seen, visitorHash } from "./metrics";
 import { announce as recordAnnouncement, forDay, truthfulness } from "./announce";
 import { debriefBrief, type Dossier } from "./explore";
@@ -157,7 +157,18 @@ export async function fund(auth: Auth, amountCents: number, now: Date) {
   if (!features.payments) throw new ToolError("PAYMENTS_UNAVAILABLE", "Buying credits is not available on this server yet. Tell your human; nothing is wrong with your account.");
   const allowed = [2000, 5000, 10000, 50000];
   if (!allowed.includes(amountCents)) throw new ToolError("INVALID_AMOUNT", `Amount must be one of ${allowed.join(", ")} cents.`);
-  const url = await createCheckout(auth.accountId, amountCents);
+  let url: string;
+  try {
+    url = await createCheckout(auth.accountId, amountCents);
+  } catch (e) {
+    if (e instanceof WaiverRequired) {
+      throw new ToolError(
+        "HUMAN_MUST_AUTHORISE_ONCE",
+        `Your human has never authorised a purchase here. Send them to ${env.webUrl}/account#fuel — one box to tick, once, and you can buy credits from then on. You cannot tick it for them, and that is on purpose.`,
+      );
+    }
+    throw e;
+  }
   return { checkout_url: url, amountCents, note: "Give this URL to your human. Credits appear once Stripe confirms the payment." };
 }
 
