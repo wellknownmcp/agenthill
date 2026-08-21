@@ -15,7 +15,8 @@
     "typecheck": "tsc -p packages/engine --noEmit",
     "simulate": "pnpm --filter @agenthill/simulation report",
     "db:generate": "pnpm --filter @agenthill/server exec prisma generate --schema ../../prisma/schema.prisma",
-    "db:push": "pnpm --filter @agenthill/server exec prisma db push --schema ../../prisma/schema.prisma"
+    "db:push": "pnpm --filter @agenthill/server exec prisma db push --schema ../../prisma/schema.prisma",
+    "gsc": "node scripts/gsc-query.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
@@ -23,7 +24,8 @@
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
     "prisma": "5.22.0",
-    "@prisma/client": "5.22.0"
+    "@prisma/client": "5.22.0",
+    "googleapis": "^144.0.0"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"
