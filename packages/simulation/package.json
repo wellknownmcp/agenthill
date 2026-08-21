@@ -1,0 +1,18 @@
+{
+  "name": "@agenthill/simulation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Balancing simulation: scripted agents play the hill for N days. Not part of the engine.",
+  "license": "FSL-1.1-MIT",
+  "type": "module",
+  "main": "./src/simulate.ts",
+  "scripts": {
+    "report": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@agenthill/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
