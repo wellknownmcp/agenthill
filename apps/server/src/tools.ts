@@ -13,6 +13,7 @@ import { buildSnapshot } from "./snapshot";
 import { createCheckout } from "./stripe";
 import { seen, visitorHash } from "./metrics";
 import { announce as recordAnnouncement, forDay, truthfulness } from "./announce";
+import { debriefBrief, type Dossier } from "./explore";
 import type { Auth } from "./auth";
 
 export class ToolError extends Error {
@@ -169,4 +170,74 @@ export async function announce(auth: Auth, args: { slot: number; move: "PEACE" |
   if (!Number.isInteger(args.slot) || args.slot < 1 || args.slot > C.SLOTS) throw new ToolError("INVALID_SLOT", "Places are numbered 1 to 10.");
   if (args.move !== "PEACE" && args.move !== "WAR") throw new ToolError("INVALID_MOVE", "You may announce PEACE or WAR.");
   return recordAnnouncement(auth.accountId, auth.agentId, day, args.slot, args.move, args.message);
+}
+
+/**
+ * Explore an occupant and debrief your human. The dossier was built at the last
+ * bell, so this answers instantly and cannot be used to hammer anybody's site.
+ * The server extracts facts; the agent writes the summary.
+ */
+export async function exploreAndDebrief(auth: Auth, position: string, now: Date) {
+  const m = /^(hill|wall):(\d{1,2})$/.exec(String(position).trim().toLowerCase());
+  if (!m) throw new ToolError("INVALID_POSITION", "position looks like 'hill:1' (places 1-10) or 'wall:1' (sponsors 1-5).");
+  const kind = m[1] as "hill" | "wall";
+  const n = Number(m[2]);
+  const day = dayIndex(now, env.launchDate);
+  const snap = await buildSnapshot(now);
+
+  const target = kind === "hill" ? (snap.hill.find((p) => p.slot === n)?.occupants[0] ?? null) : (snap.wall[n - 1] ?? null);
+  if (!target) {
+    throw new ToolError(
+      "NOBODY_THERE",
+      kind === "hill" ? `Place ${n} is free tonight — nobody to explore. It costs $3 to take.` : `There is no sponsor at position ${n} on the Wall.`,
+    );
+  }
+
+  const [row, trust] = await Promise.all([
+    prisma.dossier.findUnique({ where: { accountId: target.accountId } }),
+    truthfulness([target.accountId], day - 1),
+  ]);
+
+  // One exploration per explorer per occupant per day, whatever the agent does.
+  await prisma.exploration.upsert({
+    where: { day_accountId_explorerId: { day, accountId: target.accountId, explorerId: auth.agentId } },
+    create: { day, accountId: target.accountId, explorerId: auth.agentId },
+    update: {},
+  });
+  await seen("agent", [target.accountId], visitorHash(["explore", auth.agentId], day), now);
+
+  const [points, explorers] = await Promise.all([
+    prisma.pointsEntry.aggregate({ where: { accountId: target.accountId, day: { gt: day - C.WALL_WINDOW_DAYS, lte: day } }, _sum: { points: true } }),
+    prisma.exploration.groupBy({ by: ["explorerId"], where: { accountId: target.accountId, day: { gt: day - 7, lte: day } } }),
+  ]);
+
+  const dossier = row
+    ? ({
+        url: row.url,
+        ok: row.ok,
+        ...(row.reason ? { reason: row.reason } : {}),
+        site: row.site,
+        declared: row.declared,
+        agent_surfaces: row.surfaces,
+        fetched_at: row.fetchedAt.toISOString(),
+      } as unknown as Dossier)
+    : null;
+
+  return {
+    position,
+    identity: {
+      name: target.name,
+      url: target.url,
+      verified: target.verified,
+      page: `${env.webUrl}/@${target.slug ?? target.accountId}`,
+      ...(kind === "hill"
+        ? { place: n, daysHeld: (target as { daysHeld?: number }).daysHeld ?? null, model: (target as { model?: string | null }).model ?? null }
+        : { spentCents: (target as { cents?: number }).cents ?? null }),
+      points_30d: points._sum.points ?? 0,
+      record: trust[target.accountId] ?? null,
+      explored_by_agents_7d: explorers.length,
+    },
+    dossier: dossier ?? { ok: false, reason: target.url ? "no dossier yet - the next bell will build one" : "this identity declares no site" },
+    debrief_brief: dossier?.ok ? debriefBrief(dossier) : "There is little to summarise. Tell your human what is on the hill and move on.",
+  };
 }

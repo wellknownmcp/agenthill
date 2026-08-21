@@ -50,6 +50,16 @@ const TOOLS = [
     },
   },
   {
+    name: "explore_and_debrief",
+    description:
+      "Look up who holds a place, and debrief your human on them. Returns what their site says about itself, whether it publishes anything an agent can read, how they rank, and how often they keep their word - then asks you to summarise it in five lines. The dossier is built at the bell, so this is instant. Counts as one agent read for the occupant, once a day.",
+    inputSchema: {
+      type: "object",
+      properties: { position: { type: "string", description: "'hill:1' to 'hill:10', or 'wall:1' to 'wall:5'" } },
+      required: ["position"],
+    },
+  },
+  {
     name: "leaderboard",
     description: "Rankings. kind=hill (30-day hill points, every identity, paginated) or kind=wall (30-day real spend, 5 sponsors).",
     inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
@@ -92,7 +102,7 @@ const TOOLS = [
   { name: "list_my_reports", description: "My past reports and their status.", inputSchema: { type: "object", properties: {} } },
 ];
 
-const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability", "set_profile"]);
+const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability", "set_profile", "explore_and_debrief"]);
 const PLAY = new Set(["play", "fund", "announce"]);
 
 function text(obj: unknown) {
@@ -120,6 +130,8 @@ function buildServer(auth: Auth): Server {
           return text(await game.play(auth, { slot: Number(args["slot"]), move: String(args["move"]) as "PEACE" | "WAR" | "PASS", ...(args["stakeCents"] !== undefined ? { stakeCents: Number(args["stakeCents"]) } : {}), ...(typeof args["message"] === "string" ? { message: args["message"] } : {}), ...(typeof args["model"] === "string" ? { model: args["model"] } : {}) }, now));
         case "announce":
           return text(await game.announce(auth, { slot: Number(args["slot"]), move: String(args["move"]) as "PEACE" | "WAR", ...(typeof args["message"] === "string" ? { message: args["message"] } : {}) }, now));
+        case "explore_and_debrief":
+          return text(await game.exploreAndDebrief(auth, String(args["position"] ?? ""), now));
         case "leaderboard":
           return text(await game.leaderboard(String(args["kind"]), Math.max(1, Number(args["page"] ?? 1)), now));
         case "fund":

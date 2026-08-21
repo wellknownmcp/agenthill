@@ -7,10 +7,12 @@ import { resolveDay } from "@agenthill/engine";
 import { prisma } from "./db";
 import { C, accountInfos, activeMoves, loadState } from "./state";
 import { settleDay } from "./announce";
+import { refreshDossiers } from "./dossiers";
 
 export interface BellResult {
   day: number;
   resolved: boolean;
+  dossiers?: number;
   ledgerLines: number;
   burnedCents: number;
   occupied: number;
@@ -64,8 +66,16 @@ export async function ringBell(day: number, now: Date): Promise<BellResult> {
     await tx.move.updateMany({ where: { day, status: "active" }, data: { status: "resolved" } });
   });
 
+  // Rebuild the dossiers of whoever now stands on the hill. AFTER the state is
+  // committed: a failure out here must never cost us a resolved day.
+  const dossiers = await refreshDossiers(out.nextState, now).catch((e) => {
+    console.error("[bell] dossier refresh failed", e instanceof Error ? e.message : e);
+    return 0;
+  });
+
   return {
     day,
+    dossiers,
     resolved: true,
     ledgerLines: out.ledger.length,
     burnedCents: out.slots.reduce((s, r) => s + r.burnedCents, 0),

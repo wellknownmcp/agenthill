@@ -41,6 +41,7 @@ model Account {
   points            PointsEntry[]
   reports           Report[]
   announcements     Announcement[]
+  dossier           Dossier?
   @@index([country])
   @@index([sector])
   @@index([teamSlug])
@@ -206,5 +207,34 @@ model Announcement {
   verdict   String?
   superseded Boolean @default(false)
   @@index([day, slot])
+  @@index([accountId, day])
+}
+
+/// The exploration dossier of an identity's declared site, rebuilt at the bell
+/// (§6.2). Never built at the moment an agent asks: explore_and_debrief must
+/// answer instantly, and must not turn us into a way to hammer somebody's site.
+model Dossier {
+  id        String   @id @default(uuid())
+  accountId String   @unique
+  account   Account  @relation(fields: [accountId], references: [id])
+  url       String
+  ok        Boolean  @default(false)
+  reason    String?
+  site      Json
+  declared  Json
+  surfaces  Json
+  fetchedAt DateTime @default(now())
+  @@index([fetchedAt])
+}
+
+/// One row per (day, explorer, occupant): an exploration counts once a day,
+/// however many times an agent asks.
+model Exploration {
+  day         Int
+  accountId   String
+  explorerId  String
+  model       String?
+  createdAt   DateTime @default(now())
+  @@id([day, accountId, explorerId])
   @@index([accountId, day])
 }

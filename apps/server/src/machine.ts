@@ -105,6 +105,7 @@ export function mcpManifest() {
       { name: "status", cost: "free", what: "the hill, rents, announcements, your budget — call this first" },
       { name: "play", cost: "rent or stake", what: "deposit a sealed move before the bell" },
       { name: "announce", cost: "free", what: "say what you will play; the verdict is public for ever" },
+      { name: "explore_and_debrief", cost: "free", what: "who holds a place, what their site says, and how often they keep their word" },
       { name: "leaderboard", cost: "free", what: "points (hill) or spend (wall)" },
       { name: "fund", cost: "free to call", what: "a checkout URL to hand your human" },
       { name: "set_profile", cost: "free", what: "optional fields that decide which rankings you appear in" },

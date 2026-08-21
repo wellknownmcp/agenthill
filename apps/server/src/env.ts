@@ -36,6 +36,9 @@ export const env = {
   stripeSecretKey: optional("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
   resendApiKey: optional("RESEND_API_KEY"),
+  /** Browser Rendering: exploration fetches run on Cloudflare, never from this VPS. */
+  cfAccountId: optional("CLOUDFLARE_ACCOUNT_ID"),
+  cfApiToken: process.env.CLOUDFLARE_BROWSER_TOKEN || process.env.CLOUDFLARE_API_TOKEN || "",
   emailFrom: process.env.EMAIL_FROM ?? "The Bell <bell@agenthill.lol>",
   sentryDsn: optional("SENTRY_DSN"),
   /** Day 1 of the hill (UTC date, YYYY-MM-DD). */
@@ -45,6 +48,7 @@ export const env = {
 export const features = {
   payments: Boolean(env.stripeSecretKey && env.stripeWebhookSecret),
   email: Boolean(env.resendApiKey),
+  exploration: Boolean(env.cfAccountId && env.cfApiToken),
 };
 
 /** Say it once, loudly, at boot — a silent missing feature is how you discover
@@ -52,4 +56,5 @@ export const features = {
 export function reportFeatures(log: (m: string) => void): void {
   if (!features.payments) log("[agenthill] payments DISABLED — STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET missing. fund() will refuse.");
   if (!features.email) log("[agenthill] email DISABLED — RESEND_API_KEY missing. Nothing will be sent.");
+  if (!features.exploration) log("[agenthill] exploration DISABLED — CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN missing. explore_and_debrief will say so.");
 }
