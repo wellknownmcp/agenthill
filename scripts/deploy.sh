@@ -38,6 +38,9 @@ if [ "$FIRST" = "1" ]; then
   echo "  → put the secrets in $DIR/.env on the server before continuing (see .env.example)"
 fi
 
+echo "▸ sanity: a .env with CRLF line endings poisons every secret it holds"
+"${SSH[@]}" "set -euo pipefail; cd $DIR && if file .env | grep -q CRLF; then echo '  fixing CRLF in .env'; sed -i 's/$//' .env; fi; file .env"
+
 echo "▸ memory before anything"
 "${SSH[@]}" "free -h | head -2"
 
@@ -70,7 +73,7 @@ echo "▸ build the page (foreground, alone)"
 "${SSH[@]}" "set -euo pipefail; cd $DIR && . ~/.nvm/nvm.sh && free -h | sed -n 2p && cd apps/web && set -a && . ../../.env && set +a && NODE_OPTIONS=--max-old-space-size=2048 ../../node_modules/.bin/next build 2>&1 | tail -12"
 
 echo "▸ restart"
-"${SSH[@]}" "set -euo pipefail; cd $DIR && . ~/.nvm/nvm.sh && (pm2 restart agenthill-server agenthill-web --update-env || pm2 start deploy/ecosystem.config.cjs) && pm2 save >/dev/null"
+"${SSH[@]}" "set -euo pipefail; cd $DIR && . ~/.nvm/nvm.sh && set -a && . ./.env && set +a && (pm2 restart agenthill-server agenthill-web --update-env || pm2 start deploy/ecosystem.config.cjs) && pm2 save >/dev/null"
 
 echo "▸ smoke"
 sleep 4
