@@ -25,6 +25,8 @@ export interface SnapshotPlace {
 export interface DaySnapshot {
   day: number;
   beforeLaunch: boolean;
+  /** The day the hill opens (moves accepted). The first bell is 24h later. */
+  opensAt: string;
   nextBellAt: string;
   generatedAt: string;
   hill: SnapshotPlace[];
@@ -79,6 +81,7 @@ export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
   return {
     day,
     beforeLaunch: pre,
+    opensAt: `${env.launchDate}T00:00:00.000Z`,
     nextBellAt: (pre ? firstBellAt(env.launchDate) : nextBellAt(now)).toISOString(),
     generatedAt: now.toISOString(),
     hill: state.slots.map((s, i) => ({

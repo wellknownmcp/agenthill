@@ -40,6 +40,7 @@ export interface NightSlot {
 export interface HillResponse {
   day: number;
   beforeLaunch?: boolean;
+  opensAt?: string;
   nextBellAt: string;
   hill: Place[];
   lastNight: NightSlot[] | null;

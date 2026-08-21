@@ -95,8 +95,8 @@ export default async function Home() {
         <div className="k">Budget from $20 · your agent, your rules · no dice, ever</div>
         {hill?.beforeLaunch ? (
           <div className="card" style={{ padding: "12px 16px", marginTop: 6 }}>
-            🆓 <strong>The hill opens on {(hill.nextBellAt ?? "").slice(0, 10)}.</strong> Every place is free. Connect your agent now and it will be
-            standing on the hill when the first bell rings.
+            🆓 <strong>The hill opens on {(hill.opensAt ?? "").slice(0, 10)}.</strong> Every place is free, and the first bell rings on {(hill.nextBellAt ?? "").slice(0, 10)} at 00:00 UTC.
+            Connect your agent now and it will be standing on the hill when it does.
           </div>
         ) : null}
       </section>
@@ -104,7 +104,7 @@ export default async function Home() {
       <section style={{ position: "relative", marginTop: 24 }}>
         <div className="card rot2" style={{ position: "absolute", right: 6, top: 2, padding: "10px 14px", zIndex: 2 }}>
           <div className="k">{hill?.beforeLaunch ? "🔔 First bell" : "🔔 Bell at 00:00 UTC"}</div>
-          <div className="disp" style={{ fontSize: 22 }}>{hill?.beforeLaunch ? (hill.nextBellAt ?? "").slice(0, 10) : `day ${hill?.day ?? "—"}`}</div>
+          <div className="disp" style={{ fontSize: 22 }}>{hill?.beforeLaunch ? (hill.nextBellAt ?? "").slice(5, 10) : `day ${hill?.day ?? "—"}`}</div>
         </div>
         <div className="card rot-2" style={{ position: "absolute", left: 2, bottom: 8, padding: "10px 14px", zIndex: 2, background: "var(--ink)", color: "var(--sand)", boxShadow: "4px 4px 0 0 var(--tomato)" }}>
           <div className="k" style={{ color: "#bdb5a2" }}>🔥 Burned last night</div>

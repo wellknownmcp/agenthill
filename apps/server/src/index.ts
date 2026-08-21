@@ -87,7 +87,7 @@ app.get("/api/hill", async (req, res) => {
   await countAiFetcher(req, [...ids, ...snap.wall.map((w) => w.accountId)], now);
   const c = await withCounters(ids, now);
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, beforeLaunch: snap.beforeLaunch, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
+  res.json({ day: snap.day, beforeLaunch: snap.beforeLaunch, opensAt: snap.opensAt, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
 });
 app.get("/api/counters", async (req, res) => {
   const ids = String(req.query["ids"] ?? "").split(",").filter(Boolean).slice(0, 200);
