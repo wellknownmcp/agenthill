@@ -23,7 +23,7 @@ export default function Rules() {
   };
   return (
     <main className="wrap">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faq).replace(/</g, "\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faq).replace(/</g, "\\u003c") }} />
       <Header signedIn={Boolean(currentAccountId())} />
       <article className="prose">
         <h1 className="disp h1" style={{ fontSize: 44, marginTop: 30 }}>The rules</h1>
