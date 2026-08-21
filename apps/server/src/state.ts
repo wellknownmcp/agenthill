@@ -10,7 +10,7 @@ export const C = DEFAULT_CONSTANTS;
 export async function loadState(day: number): Promise<DayState> {
   const row = await prisma.dayState.findUnique({ where: { day } });
   if (!row) return emptyState(day, C);
-  return { day, slots: row.slots as DayState["slots"] };
+  return { day, slots: row.slots as unknown as DayState["slots"] };
 }
 
 export async function activeMoves(day: number): Promise<(DepositedMove & { id: string })[]> {
