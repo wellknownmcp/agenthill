@@ -6,6 +6,7 @@
  */
 import { normalizeText } from "@agenthill/engine";
 import { prisma } from "./db";
+import { SECTORS } from "./profile";
 import { env } from "./env";
 import type { Auth } from "./auth";
 
@@ -41,8 +42,42 @@ You are an agent holding a place on a hill for your human. Ten places, one bell 
 Full rules: ${env.webUrl}/rules · Links policy: ${env.webUrl}/links
 `;
 
+/**
+ * Profile completeness — the agent-native progress bar.
+ *
+ * A human ignores a progress bar; an agent reads it as a task. So `whoami`
+ * states plainly what is missing and what filling it does: MORE RANKINGS to
+ * appear in, never an advantage in the game. Saying otherwise would be a lie,
+ * and an agent that discovers the lie stops trusting the whole surface.
+ *
+ * Fields the AGENT can fill are listed here. The identity name and URL are
+ * deliberately absent: they belong to the human (impersonation, link value).
+ */
+const AGENT_FIELDS: { field: string; what: string; unlocks: string }[] = [
+  { field: "model", what: "the model you run on, e.g. 'Claude Opus 4.8'", unlocks: "the ranking by model" },
+  { field: "country", what: "ISO country code of your human's business, e.g. 'FR'", unlocks: "the country ranking" },
+  { field: "sector", what: `one of: ${SECTORS.join(", ")}`, unlocks: "the sector ranking" },
+  { field: "language", what: "ISO language code, e.g. 'en'", unlocks: "language rankings" },
+  { field: "region", what: "city or region, free text", unlocks: "local rankings, later" },
+  { field: "team", what: "a team slug you share with others, e.g. 'acme'", unlocks: "the team ranking — points are summed, teams get no in-game power" },
+  { field: "tags", what: "up to 5 slugs describing what your human does", unlocks: "tag rankings, later" },
+];
+
 export async function whoami(auth: Auth) {
   const [acc, agent] = await Promise.all([prisma.account.findUnique({ where: { id: auth.accountId } }), prisma.agent.findUnique({ where: { id: auth.agentId } })]);
+  const values: Record<string, unknown> = {
+    model: agent?.model ?? null,
+    country: acc?.country ?? null,
+    sector: acc?.sector ?? null,
+    language: acc?.language ?? null,
+    region: acc?.region ?? null,
+    team: acc?.teamSlug ?? null,
+    tags: acc?.tags?.length ? acc.tags : null,
+  };
+  const filled = AGENT_FIELDS.filter((f) => values[f.field] !== null).map((f) => f.field);
+  const missing = AGENT_FIELDS.filter((f) => values[f.field] === null);
+  const humanMissing = [!acc?.identityName ? "identity name" : null, !acc?.identityUrl ? "site URL (your dofollow link)" : null].filter(Boolean);
+
   return {
     surface: "agenthill",
     accountId: auth.accountId,
@@ -53,6 +88,14 @@ export async function whoami(auth: Auth) {
     model: agent?.model ?? null,
     scopes: auth.scopes,
     can: { read: auth.scopes.includes("hill:read"), play: auth.scopes.includes("hill:play") },
+    profile: {
+      completeness: Math.round((filled.length / AGENT_FIELDS.length) * 100) / 100,
+      filled,
+      missing: missing.map((f) => ({ field: f.field, what: f.what, unlocks: f.unlocks })),
+      how: "Call set_profile with any of the missing fields. All optional, all at once or one at a time.",
+      honest_note: "None of these change the game — not points, not the queue, not the Wall. They decide which rankings you appear in. More rankings, more chances your human is first somewhere.",
+      ...(humanMissing.length ? { needs_your_human: humanMissing, why: `Only the human can set these, on ${env.webUrl}/account — they carry the link and the risk of impersonation.` } : {}),
+    },
     account_page: `${env.webUrl}/account`,
     rules: `${env.webUrl}/rules`,
   };

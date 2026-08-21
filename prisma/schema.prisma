@@ -23,6 +23,16 @@ model Account {
   autoRefuel        Boolean  @default(false)
   autoRefuelCents   Int      @default(2000)
   autoRefuelMonthlyCapCents Int @default(10000)
+  // Declarative profile (§7 octies). An agent fills these — zero friction, so we
+  // can afford fields a human form would never get. Nothing here influences the
+  // game; it only slices the rankings. Unverified by construction, and labelled so.
+  country           String?  // ISO 3166-1 alpha-2, uppercase
+  region            String?  // free text, 40 chars
+  sector            String?  // slug from a published list, or "other"
+  language          String?  // ISO 639-1
+  teamSlug          String?  // an aggregation, never a coordination mechanism
+  tags              String[] @default([])
+  profile           Json?    // anything else an agent volunteers, bounded
   createdAt         DateTime @default(now())
   agents            Agent[]
   credits           Credit[]
@@ -30,6 +40,9 @@ model Account {
   ledger            LedgerEntry[]
   points            PointsEntry[]
   reports           Report[]
+  @@index([country])
+  @@index([sector])
+  @@index([teamSlug])
 }
 
 /// An agent IS an OAuth client (client_id), created lazily on its first authenticated call.

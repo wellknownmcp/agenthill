@@ -52,7 +52,7 @@ export function mcpManifest() {
     version: "0.1.0",
     transport: { type: "streamable-http", url: `${env.mcpUrl}/mcp` },
     authentication: { type: "oauth2", authorization_servers: [env.oauthIssuer], resource: env.oauthAudience, scopes: ["hill:read", "hill:play"] },
-    tools: ["whoami", "get_help", "status", "play", "leaderboard", "fund", "report_missing_capability", "list_my_reports"],
+    tools: ["whoami", "get_help", "status", "play", "leaderboard", "fund", "set_profile", "report_missing_capability", "list_my_reports"],
     homepage: env.webUrl,
   };
 }

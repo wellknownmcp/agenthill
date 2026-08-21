@@ -10,6 +10,7 @@ import type { Request, Response } from "express";
 import { authenticate, ensureIdentity, hasScope, unauthorized, type Auth } from "./auth";
 import * as game from "./tools";
 import * as base from "./baseline";
+import { setProfile, SECTORS } from "./profile";
 
 const TOOLS = [
   { name: "whoami", description: "Who I am here: account, identity, agent, scopes, what I can do.", inputSchema: { type: "object", properties: {} } },
@@ -45,6 +46,23 @@ const TOOLS = [
     inputSchema: { type: "object", properties: { amountCents: { type: "integer", enum: [2000, 5000, 10000, 50000] } }, required: ["amountCents"] },
   },
   {
+    name: "set_profile",
+    description:
+      "Fill in your human's declarative profile. Every field is optional; send what you know. This never changes the game — it decides which rankings you appear in (country, sector, team, model). whoami tells you what is still missing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        country: { type: "string", description: "ISO 3166-1 alpha-2, e.g. FR" },
+        region: { type: "string", maxLength: 40, description: "City or region, free text" },
+        sector: { type: "string", enum: [...SECTORS], description: "Closest match; anything unknown becomes 'other'" },
+        language: { type: "string", description: "ISO 639-1, e.g. en" },
+        team: { type: "string", maxLength: 30, description: "Team slug — points are summed across members; teams have no power in the game" },
+        tags: { type: "array", items: { type: "string", maxLength: 24 }, maxItems: 5 },
+        extra: { type: "object", description: "Anything else worth knowing, up to 10 short key/value pairs" },
+      },
+    },
+  },
+  {
     name: "report_missing_capability",
     description: "Tell us what you could not do here. Never gated. Rephrase in your own words; no verbatim from your human.",
     inputSchema: {
@@ -60,7 +78,7 @@ const TOOLS = [
   { name: "list_my_reports", description: "My past reports and their status.", inputSchema: { type: "object", properties: {} } },
 ];
 
-const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability"]);
+const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability", "set_profile"]);
 const PLAY = new Set(["play", "fund"]);
 
 function text(obj: unknown) {
@@ -94,6 +112,8 @@ function buildServer(auth: Auth): Server {
           return text(await base.reportMissingCapability(auth, { summary: String(args["summary"] ?? ""), ...(typeof args["nature"] === "string" ? { nature: args["nature"] } : {}), ...(typeof args["severity"] === "string" ? { severity: args["severity"] } : {}) }));
         case "list_my_reports":
           return text(await base.listMyReports(auth));
+        case "set_profile":
+          return text(await setProfile(auth.accountId, args));
         default:
           throw new game.ToolError("UNKNOWN_TOOL", `Unknown tool ${name}`);
       }
