@@ -39,6 +39,8 @@ export const env = {
   /** Browser Rendering: exploration fetches run on Cloudflare, never from this VPS. */
   cfAccountId: optional("CLOUDFLARE_ACCOUNT_ID"),
   cfApiToken: process.env.CLOUDFLARE_BROWSER_TOKEN || process.env.CLOUDFLARE_API_TOKEN || "",
+  /** IndexNow: Bing, Yandex, Naver, Seznam. Not Google, not Brave. */
+  indexNowKey: optional("INDEXNOW_KEY"),
   emailFrom: process.env.EMAIL_FROM ?? "The Bell <bell@agenthill.lol>",
   sentryDsn: optional("SENTRY_DSN"),
   /** Day 1 of the hill (UTC date, YYYY-MM-DD). */
@@ -49,6 +51,7 @@ export const features = {
   payments: Boolean(env.stripeSecretKey && env.stripeWebhookSecret),
   email: Boolean(env.resendApiKey),
   exploration: Boolean(env.cfAccountId && env.cfApiToken),
+  indexnow: Boolean(env.indexNowKey),
 };
 
 /** Say it once, loudly, at boot — a silent missing feature is how you discover

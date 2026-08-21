@@ -9,6 +9,7 @@ import { webhook } from "./stripe";
 import { llmsTxt, agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
 import { indexMd, rulesMd, linksMd, wantsMarkdown } from "./markdown";
 import { links as agentLinks, rulesData, llmsTxtAgentic } from "./agentic";
+import { keyFile, ping, changedUrls } from "./indexnow";
 import { prisma } from "./db";
 import { counters, seen, visitorHash } from "./metrics";
 import { dayIndex as dayOf } from "./day";
@@ -179,8 +180,23 @@ app.post("/admin/bell", async (req, res) => {
   const now = new Date();
   if (beforeLaunch(now, env.launchDate)) return res.json({ skipped: "before launch", opensAt: env.launchDate });
   const results = await ringDueBells(dayIndex(now, env.launchDate), now);
-  return res.json({ now: now.toISOString(), currentDay: dayIndex(now, env.launchDate), results });
+
+  // Tell the engines that consume IndexNow what actually changed. Only what
+  // changed: submitting the whole site nightly is how a host gets ignored.
+  let indexnow = null;
+  if (results.some((r) => r.resolved)) {
+    const day = dayIndex(now, env.launchDate);
+    const state = await prisma.dayState.findUnique({ where: { day } });
+    const slots = ((state?.slots as { occupants: { accountId: string }[] }[] | undefined) ?? []).flatMap((s) => s.occupants.map((o) => o.accountId));
+    const accounts = slots.length ? await prisma.account.findMany({ where: { id: { in: slots } }, select: { id: true, slug: true } }) : [];
+    indexnow = await ping(changedUrls({ identities: accounts.map((a) => a.slug ?? a.id), day }));
+  }
+  return res.json({ now: now.toISOString(), currentDay: dayIndex(now, env.launchDate), results, indexnow });
 });
+
+// IndexNow proof of ownership. Must live on the host whose URLs we submit.
+const inKey = keyFile();
+if (inKey) app.get(inKey.path, (_req, res) => res.type("text/plain").send(inKey.body));
 
 app.get("/health", async (_req, res) => {
   const now = new Date();
@@ -195,6 +211,8 @@ app.get("/health", async (_req, res) => {
     lastBellAt: last?.createdAt ?? null,
     payments: features.payments,
     email: features.email,
+    exploration: features.exploration,
+    indexnow: features.indexnow,
   });
 });
 
