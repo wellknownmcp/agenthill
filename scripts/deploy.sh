@@ -39,7 +39,7 @@ if [ "$FIRST" = "1" ]; then
 fi
 
 echo "▸ sanity: a .env with CRLF line endings poisons every secret it holds"
-"${SSH[@]}" "set -euo pipefail; cd $DIR && if file .env | grep -q CRLF; then echo '  fixing CRLF in .env'; sed -i 's/$//' .env; fi; file .env"
+"${SSH[@]}" "set -euo pipefail; cd $DIR && if file .env | grep -q CRLF; then echo '  fixing CRLF in .env'; sed -i 's/\r$//' .env; fi; file .env"
 
 echo "▸ memory before anything"
 "${SSH[@]}" "free -h | head -2"
