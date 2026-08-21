@@ -70,6 +70,14 @@ app.post("/internal/seen", async (req, res) => {
   await seen(kind, accountIds.slice(0, 200).map(String), visitor.slice(0, 64), new Date());
   return res.json({ ok: true });
 });
+/** The page asks for a Checkout URL on the human's behalf (the server owns Stripe). */
+app.post("/internal/checkout", async (req, res) => {
+  if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
+  const { accountId, amountCents } = req.body as { accountId: string; amountCents: number };
+  if (typeof accountId !== "string" || ![2000, 5000, 10000, 50000].includes(Number(amountCents))) return res.status(400).json({ error: "bad request" });
+  const { createCheckout } = await import("./stripe");
+  return res.json({ url: await createCheckout(accountId, Number(amountCents)) });
+});
 app.get("/api/wall", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
   cache(res, snap.generatedAt, snap.nextBellAt);
