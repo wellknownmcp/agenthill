@@ -11,6 +11,7 @@ import { dayIndex, nextBellAt } from "./day";
 import { wallet, dailyBurn, daysSurvivable } from "./wallet";
 import { buildSnapshot } from "./snapshot";
 import { createCheckout } from "./stripe";
+import { seen, visitorHash } from "./metrics";
 import type { Auth } from "./auth";
 
 export class ToolError extends Error {
@@ -43,6 +44,9 @@ export async function status(auth: Auth, now: Date) {
     budget(auth, day, now),
     prisma.slotResolution.findMany({ where: { day: { gte: day - 7, lt: day } }, orderBy: [{ day: "asc" }, { slot: "asc" }], select: { day: true, slot: true, outcome: true, peaceCount: true, warCount: true, burnedCents: true, occupants: true } }),
   ]);
+  // 🤖 agent reads: 1 per agent (OAuth client) per day per identity shown
+  const shown = [...new Set([...snap.hill.flatMap((p) => p.occupants.map((o) => o.accountId)), ...snap.wall.map((w) => w.accountId)])];
+  await seen("agent", shown, visitorHash(["agent", auth.agentId], day), now);
   return {
     day,
     next_bell_at: nextBellAt(now).toISOString(),

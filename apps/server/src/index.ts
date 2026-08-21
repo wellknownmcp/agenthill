@@ -8,6 +8,8 @@ import { dayIndex } from "./day";
 import { webhook } from "./stripe";
 import { llmsTxt, agentCard, mcpManifest } from "./machine";
 import { prisma } from "./db";
+import { counters, seen, visitorHash } from "./metrics";
+import { dayIndex as dayOf } from "./day";
 
 const app = express();
 app.disable("x-powered-by");
@@ -35,10 +37,38 @@ function cache(res: express.Response, snapAt: string, bellAt: string) {
   res.setHeader("ETag", `"${Buffer.from(snapAt).toString("base64url")}"`);
 }
 
-app.get("/api/hill", async (_req, res) => {
-  const snap = await buildSnapshot(new Date());
+const AI_UA = /GPTBot|ChatGPT-User|OAI-SearchBot|ClaudeBot|Claude-User|AnthropicBot|PerplexityBot|Perplexity-User|Google-Extended|GoogleOther|Applebot-Extended|Bytespider|CCBot|DuckAssistBot|MistralAI-User|Meta-ExternalAgent/i;
+async function countAiFetcher(req: express.Request, ids: string[], now: Date) {
+  const ua = String(req.headers["user-agent"] ?? "");
+  if (!AI_UA.test(ua)) return;
+  await seen("agent", ids, visitorHash(["ua", ua.split("/")[0] ?? ua], dayOf(now, env.launchDate)), now);
+}
+async function withCounters(ids: string[], now: Date) {
+  return counters([...new Set(ids)], now);
+}
+
+app.get("/api/hill", async (req, res) => {
+  const now = new Date();
+  const snap = await buildSnapshot(now);
+  const ids = snap.hill.flatMap((p) => p.occupants.map((o) => o.accountId));
+  await countAiFetcher(req, [...ids, ...snap.wall.map((w) => w.accountId)], now);
+  const c = await withCounters(ids, now);
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, nextBellAt: snap.nextBellAt, hill: snap.hill, lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
+  res.json({ day: snap.day, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
+});
+app.get("/api/counters", async (req, res) => {
+  const ids = String(req.query["ids"] ?? "").split(",").filter(Boolean).slice(0, 200);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=60");
+  res.json(await withCounters(ids, new Date()));
+});
+/** The page reports human views (deduplicated by the page with its own salted hash). Internal use. */
+app.post("/internal/seen", async (req, res) => {
+  if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
+  const { kind, accountIds, visitor } = req.body as { kind: "view" | "click" | "agent"; accountIds: string[]; visitor: string };
+  if (!["view", "click", "agent"].includes(kind) || !Array.isArray(accountIds) || typeof visitor !== "string") return res.status(400).json({ error: "bad request" });
+  await seen(kind, accountIds.slice(0, 200).map(String), visitor.slice(0, 64), new Date());
+  return res.json({ ok: true });
 });
 app.get("/api/wall", async (_req, res) => {
   const snap = await buildSnapshot(new Date());

@@ -152,3 +152,22 @@ model EmailLog {
   providerId String?
   sentAt     DateTime @default(now())
 }
+
+/// Honest counters (§7 quater): one row per (day, kind, identity, visitor). Counting = counting rows.
+/// kind: view (human render) | agent (MCP read or AI fetcher) | click (outbound). Purged after 8 days.
+model MetricSeen {
+  day         Int
+  kind        String
+  accountId   String
+  visitorHash String
+  @@id([day, kind, accountId, visitorHash])
+  @@index([accountId, day])
+}
+
+/// The web app's OAuth client at the Animam AS (registered once via DCR, kept here).
+model OauthClientRegistration {
+  id           String   @id @default("web")
+  clientId     String
+  clientSecret String
+  createdAt    DateTime @default(now())
+}

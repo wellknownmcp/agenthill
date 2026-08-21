@@ -1,0 +1,50 @@
+:root {
+  --sand: #f5eedc;
+  --ink: #1a1a1a;
+  --tomato: #ff5a36;
+  --leaf: #3daa6e;
+  --muted: #5d574a;
+  --paper: #ffffff;
+  --line: #bdb5a2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--sand); color: var(--ink); }
+body { font-family: var(--font-mono), "Courier New", monospace; line-height: 1.6; }
+a { color: var(--ink); }
+a:hover { color: var(--tomato); }
+.disp { font-family: var(--font-disp), "Arial Black", sans-serif; font-weight: 400; }
+.k { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.wrap { max-width: 960px; margin: 0 auto; padding: 22px 20px 60px; }
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1.6px solid var(--ink); border-radius: 999px; box-shadow: 3px 3px 0 0 var(--ink); text-decoration: none; padding: 8px 16px; background: var(--paper); font-weight: 500; transition: transform .1s, box-shadow .1s; cursor: pointer; font-size: 13px; }
+.pill:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 0 var(--ink); color: var(--ink); }
+.pill.hot { background: var(--tomato); color: #fff; }
+.pill.hot:hover { color: #fff; }
+.pill.leaf { background: var(--leaf); color: #fff; }
+.card { background: var(--paper); border: 1.6px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 0 var(--ink); }
+.h1 { font-size: clamp(40px, 8vw, 64px); line-height: .95; text-transform: uppercase; letter-spacing: .02em; color: var(--tomato); -webkit-text-stroke: 2px var(--ink); text-shadow: 4px 4px 0 #fff; text-wrap: balance; margin: 0; }
+.h2 { font-size: 30px; line-height: 1; color: #fff; -webkit-text-stroke: 1px var(--ink); text-shadow: 3px 3px 0 var(--ink); margin: 0; }
+.bracket { position: relative; display: inline-block; padding: 0 8px; font-weight: 500; }
+.bracket::before, .bracket::after { content: ""; position: absolute; width: 7px; height: 7px; }
+.bracket::before { left: 0; top: -2px; border-left: 1.6px solid var(--tomato); border-top: 1.6px solid var(--tomato); }
+.bracket::after { right: 0; bottom: -2px; border-right: 1.6px solid var(--tomato); border-bottom: 1.6px solid var(--tomato); }
+.tag { position: absolute; display: flex; align-items: center; gap: 6px; background: var(--paper); border: 1.6px solid var(--ink); border-radius: 999px; box-shadow: 2.5px 2.5px 0 0 var(--ink); padding: 3px 10px 3px 6px; white-space: nowrap; font-size: 12px; text-decoration: none; }
+.tag:hover { color: var(--ink); transform: translate(1px, 1px); box-shadow: 1.5px 1.5px 0 0 var(--ink); }
+.tag.free { background: var(--sand); border-style: dashed; color: var(--muted); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; font-weight: 400; padding: 8px 6px; border-bottom: 1.6px solid var(--ink); }
+.table td { padding: 9px 6px; border-bottom: 1px dashed var(--line); vertical-align: middle; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.section { display: flex; flex-direction: column; gap: 12px; margin-top: 36px; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.grid5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px) { .grid5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.code { font-size: 12px; background: var(--sand); border: 1.6px solid var(--ink); border-radius: 8px; padding: 8px 12px; overflow-x: auto; white-space: nowrap; }
+.prose { max-width: 70ch; font-size: 14px; }
+.prose h2 { font-family: var(--font-disp); font-weight: 400; font-size: 24px; margin: 28px 0 8px; }
+.prose h3 { font-size: 14px; margin: 20px 0 6px; font-weight: 600; }
+.prose li { margin: 4px 0; }
+.prose table { border-collapse: collapse; font-size: 13px; }
+.prose th, .prose td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+input, select { font: inherit; border: 1.6px solid var(--ink); border-radius: 8px; padding: 8px 10px; background: #fff; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.rot-1 { transform: rotate(-1deg); } .rot1 { transform: rotate(1deg); } .rot-2 { transform: rotate(-2deg); } .rot2 { transform: rotate(2deg); }
