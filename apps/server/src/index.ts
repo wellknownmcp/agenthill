@@ -8,6 +8,7 @@ import { dayIndex, beforeLaunch, firstBellAt } from "./day";
 import { webhook } from "./stripe";
 import { llmsTxt, agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
 import { indexMd, rulesMd, linksMd, wantsMarkdown } from "./markdown";
+import { links as agentLinks, rulesData, llmsTxtAgentic } from "./agentic";
 import { prisma } from "./db";
 import { counters, seen, visitorHash } from "./metrics";
 import { dayIndex as dayOf } from "./day";
@@ -87,7 +88,26 @@ app.get("/api/hill", async (req, res) => {
   await countAiFetcher(req, [...ids, ...snap.wall.map((w) => w.accountId)], now);
   const c = await withCounters(ids, now);
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, beforeLaunch: snap.beforeLaunch, opensAt: snap.opensAt, nextBellAt: snap.nextBellAt, hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })), lastNight: snap.lastNight, burnedLastNightCents: snap.burnedLastNightCents });
+  res.json({
+    day: snap.day,
+    beforeLaunch: snap.beforeLaunch,
+    opensAt: snap.opensAt,
+    nextBellAt: snap.nextBellAt,
+    hill: snap.hill.map((p) => ({ ...p, occupants: p.occupants.map((o) => ({ ...o, counters: c[o.accountId] })) })),
+    lastNight: snap.lastNight,
+    burnedLastNightCents: snap.burnedLastNightCents,
+    ...agentLinks([
+      { rel: "rules", href: `${env.webUrl}/api/rules`, what: "every constant and the resolution table, as data" },
+      { rel: "wall", href: `${env.webUrl}/api/wall`, what: "the sponsors" },
+      { rel: "leaderboard", href: `${env.webUrl}/api/leaderboard/hill`, what: "every identity by points" },
+    ]),
+  });
+});
+/** The rules as data: an agent should compute a strategy, not parse prose. */
+app.get("/api/rules", (_req, res) => {
+  machine(res);
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.json(rulesData());
 });
 app.get("/api/counters", async (req, res) => {
   const ids = String(req.query["ids"] ?? "").split(",").filter(Boolean).slice(0, 200);
@@ -114,13 +134,13 @@ app.post("/internal/checkout", async (req, res) => {
 app.get("/api/wall", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, wall: snap.wall });
+  res.json({ day: snap.day, wall: snap.wall, ...agentLinks([{ rel: "how-spend-is-counted", href: `${env.webUrl}/links.md`, what: "what counts towards the Wall, and what never does" }]) });
 });
 app.get("/api/leaderboard/hill", async (req, res) => {
   const snap = await buildSnapshot(new Date());
   const page = Math.max(1, Number(req.query["page"] ?? 1));
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.json({ day: snap.day, page, total: snap.leaderboardTotal, rows: snap.leaderboard.slice((page - 1) * 100, page * 100) });
+  res.json({ day: snap.day, page, total: snap.leaderboardTotal, rows: snap.leaderboard.slice((page - 1) * 100, page * 100), ...agentLinks([{ rel: "points-formula", href: `${env.webUrl}/api/rules`, what: "how points are earned" }]) });
 });
 app.get("/api/day/:n", async (req, res) => {
   const n = Number(req.params.n);
@@ -139,7 +159,18 @@ app.get("/llms-full.txt", async (_req, res) => {
 app.get("/llms.txt", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.type("text/plain; charset=utf-8").send(llmsTxt(snap));
+  res.type("text/plain; charset=utf-8").send(
+    llmsTxtAgentic({
+      day: snap.day,
+      beforeLaunch: snap.beforeLaunch,
+      opensAt: snap.opensAt,
+      nextBellAt: snap.nextBellAt,
+      burnedLastNightCents: snap.burnedLastNightCents,
+      hill: snap.hill.map((p) => ({ slot: p.slot, holders: p.occupants.map((o) => ({ name: o.name, url: o.url, model: o.model, daysHeld: o.daysHeld })) })),
+      wall: snap.wall.map((w) => ({ name: w.name, url: w.url, cents: w.cents })),
+      leaderTotal: snap.leaderboardTotal,
+    }),
+  );
 });
 
 // ── The bell (cron, X-Cron-Secret). Idempotent; catches up missed days.

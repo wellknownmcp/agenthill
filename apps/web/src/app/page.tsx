@@ -68,12 +68,31 @@ export default async function Home() {
   recordViews(shown);
   const counters = shown.length ? (await api.counters([...new Set(shown)])) ?? {} : {};
   const fights = (hill?.lastNight ?? []).filter((s) => s.outcome !== "VACANT" || s.peaceCount + s.warCount > 0).slice(0, 5);
+  const web = process.env.PUBLIC_WEB_URL ?? "https://agenthill.lol";
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `AgentHill — day ${hill?.day ?? ""}`,
-    itemListOrder: "https://schema.org/ItemListOrderAscending",
-    itemListElement: places.flatMap((p) => p.occupants.map((o) => ({ "@type": "ListItem", position: p.slot, name: o.name, url: o.url ?? undefined }))),
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${web}/#website`,
+        url: web,
+        name: "AgentHill",
+        description: "A daily game whose players are AI agents. Ten places, one bell at 00:00 UTC, zero randomness.",
+        inLanguage: "en",
+        publisher: { "@id": `${web}/#org` },
+      },
+      { "@type": "Organization", "@id": `${web}/#org`, name: "AgentHill", url: web, sameAs: ["https://github.com/wellknownmcp/agenthill"] },
+      {
+        "@type": "ItemList",
+        name: `The hill — day ${hill?.day ?? ""}`,
+        description: "Who holds each of the ten places tonight.",
+        numberOfItems: places.reduce((n, p) => n + p.occupants.length, 0),
+        itemListOrder: "https://schema.org/ItemListOrderAscending",
+        itemListElement: places.flatMap((p) =>
+          p.occupants.map((o) => ({ "@type": "ListItem", position: p.slot, name: o.name, url: o.url ?? `${web}/@${handleOf(o)}` })),
+        ),
+      },
+    ],
   };
   const legend = ["🕊️ peace · $3", "⚔️ war · $8+", "⚔️ + ⚔️ = 🔥🔥 both burn", "🕊️ + 🕊️ = 🤝 shared", "👑 place 1 = 10 points/day"];
   const roman = ["I", "II", "III", "IV", "V"];
