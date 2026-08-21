@@ -106,6 +106,33 @@ async function cf<T>(path: string, body: unknown): Promise<T | null> {
 
 const stripFrontmatter = (md: string): string => (md.startsWith("---") ? md.replace(/^---[\s\S]*?---\s*/, "") : md);
 
+/**
+ * The readable part, without the furniture.
+ *
+ * Cloudflare's markdown keeps the navigation, and a debrief written from a nav
+ * bar is worse than no debrief: the agent tells its human about a menu. So we
+ * drop lines that are mostly links or chrome, and start at the first line that
+ * reads like a sentence.
+ */
+export function readableExcerpt(md: string, max: number): string | null {
+  const chrome = /^(home|pricing|docs?|login|log in|sign up|menu|contact|blog|about|careers|privacy|terms|cookies?|skip to)/i;
+  const lines = stripFrontmatter(md).split("\n");
+  const kept: string[] = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/^!?\[/.test(line) && line.replace(/!?\[[^\]]*\]\([^)]*\)/g, "").trim().length < 12) continue; // a line that is only links or images
+    const linkless = line.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1");
+    const words = linkless.replace(/[#>*_`|-]/g, " ").trim();
+    if (words.length < 12) continue;
+    if (chrome.test(words)) continue;
+    kept.push(words);
+    if (kept.join(" ").length >= max) break;
+  }
+  const out = normalizeText(kept.join(" "), max);
+  return out.length > 0 ? out : null;
+}
+
 function meta(html: string, name: string): string | null {
   const patterns = [
     new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"),
@@ -222,7 +249,7 @@ export async function buildDossier(rawUrl: string, now: Date): Promise<Dossier> 
   const nodes = jsonLdNodes(body);
   const h1 = body.match(/<h1[^>]*>([\s\S]{0,200}?)<\/h1>/i)?.[1]?.replace(/<[^>]*>/g, " ").trim();
   const lang = body.match(/<html[^>]+lang=["']([a-zA-Z-]{2,8})["']/i)?.[1] ?? null;
-  const text = md ? normalizeText(stripFrontmatter(md).replace(/\s+/g, " "), MAX_MD) : null;
+  const text = md ? readableExcerpt(md, MAX_MD) : null;
 
   const [llms, agentJson, mcpJson, robots] = await Promise.all([
     probe(u, "/llms.txt"),
