@@ -27,7 +27,8 @@ module.exports = {
     {
       name: "agenthill-web",
       cwd: path.join(root, "apps", "web"),
-      script: path.join(root, "node_modules", "next", "dist", "bin", "next"),
+      // pnpm puts next under the app, not at the workspace root.
+      script: path.join(root, "apps", "web", "node_modules", "next", "dist", "bin", "next"),
       args: ["start", "-p", "3304"],
       env: { NODE_ENV: "production", PORT: "3304" },
       max_memory_restart: "500M",
