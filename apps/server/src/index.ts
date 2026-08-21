@@ -12,6 +12,7 @@ import { links as agentLinks, rulesData, llmsTxtAgentic } from "./agentic";
 import { keyFile, ping, changedUrls } from "./indexnow";
 import { prisma } from "./db";
 import { counters, seen, visitorHash } from "./metrics";
+import { take, LIMITS } from "./ratelimit";
 import { dayIndex as dayOf } from "./day";
 
 const app = express();
@@ -21,6 +22,22 @@ app.set("trust proxy", true);
 // Stripe needs the raw body for signature verification — mount before json().
 app.post("/stripe/webhook", express.raw({ type: "application/json" }), webhook);
 app.use(express.json({ limit: "256kb" }));
+
+/**
+ * Public read API, per IP. A 429 with Retry-After, never a challenge page: an
+ * agent can read a number and wait, it cannot read a challenge.
+ */
+app.use(["/api", "/llms.txt", "/llms-full.txt"], (req, res, next) => {
+  const ip = (req.headers["cf-connecting-ip"] as string) || req.ip || "unknown";
+  const v = take(`api:${ip}`, LIMITS.publicApi, Date.now());
+  res.setHeader("X-RateLimit-Limit", String(LIMITS.publicApi.max));
+  res.setHeader("X-RateLimit-Remaining", String(v.remaining));
+  if (!v.ok) {
+    res.setHeader("Retry-After", String(v.retryAfterSeconds));
+    return res.status(429).json({ error: "rate_limited", retry_after_seconds: v.retryAfterSeconds, note: "Read /llms.txt once; it carries the whole state." });
+  }
+  return next();
+});
 
 // ── MCP (Streamable HTTP, stateless) ─────────────────────────────────────────
 app.post("/mcp", handleMcp);

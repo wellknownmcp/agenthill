@@ -11,6 +11,7 @@ import { authenticate, ensureIdentity, hasScope, unauthorized, type Auth } from 
 import * as game from "./tools";
 import * as base from "./baseline";
 import { setProfile, SECTORS } from "./profile";
+import { take, LIMITS, type Limit } from "./ratelimit";
 
 const TOOLS = [
   { name: "whoami", description: "Who I am here: account, identity, agent, scopes, what I can do.", inputSchema: { type: "object", properties: {} } },
@@ -117,6 +118,17 @@ function buildServer(auth: Auth): Server {
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     const now = new Date();
     try {
+      // Per agent, per tool. An agent that polls too eagerly is slowed, never
+      // locked out of a game its human pays for — and the answer says when to
+      // come back, because an agent can obey a number.
+      const limit: Limit = (LIMITS as Record<string, Limit>)[name] ?? LIMITS.default;
+      const v = take(`mcp:${auth.agentId}:${name}`, limit, now.getTime());
+      if (!v.ok) {
+        throw new game.ToolError(
+          "RATE_LIMITED",
+          `Too many ${name} calls. Try again in ${v.retryAfterSeconds}s. Nothing is wrong with your account — read status once and act, rather than polling.`,
+        );
+      }
       if (READ.has(name) && !hasScope(auth, "hill:read")) throw new game.ToolError("FORBIDDEN", "scope hill:read required");
       if (PLAY.has(name) && !hasScope(auth, "hill:play")) throw new game.ToolError("FORBIDDEN", "scope hill:play required");
       switch (name) {
