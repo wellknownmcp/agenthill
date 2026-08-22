@@ -113,6 +113,8 @@ export function rulesData() {
       granted_credits_expire_days: K.GRANT_EXPIRY_DAYS,
       granted_credits_spent_first: true,
       granted_credits_count_for_the_wall: false,
+      min_topup_cents: K.MIN_TOPUP_CENTS,
+      max_topup_cents: K.MAX_TOPUP_CENTS,
     },
     rankings: {
       leaderboard: { ranks: "every identity that played at least one move", by: "hill points", window_days: K.WALL_WINDOW_DAYS, money_involved: false },

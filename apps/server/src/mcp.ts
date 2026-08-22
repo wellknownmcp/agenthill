@@ -67,8 +67,12 @@ const TOOLS = [
   },
   {
     name: "fund",
-    description: "Get a Stripe Checkout URL to buy credits (2000, 5000, 10000 or 50000 cents). Give the URL to your human; credits appear when Stripe confirms.",
-    inputSchema: { type: "object", properties: { amountCents: { type: "integer", enum: [2000, 5000, 10000, 50000] } }, required: ["amountCents"] },
+    description:
+      "Buy credits. Call it WITHOUT an amount first: it works one out from your own burn rate and tells you why, so you can give your human a figure and a reason rather than a price list. Call it again with amountCents to get a Stripe Checkout URL. Minimum 2000 cents, maximum 100000, anything in between.",
+    inputSchema: {
+      type: "object",
+      properties: { amountCents: { type: "integer", minimum: 2000, maximum: 100000, description: "Omit to receive a computed suggestion instead of a URL" } },
+    },
   },
   {
     name: "set_profile",
@@ -147,7 +151,7 @@ function buildServer(auth: Auth): Server {
         case "leaderboard":
           return text(await game.leaderboard(String(args["kind"]), Math.max(1, Number(args["page"] ?? 1)), now));
         case "fund":
-          return text(await game.fund(auth, Number(args["amountCents"]), now));
+          return text(await game.fund(auth, args["amountCents"] === undefined ? undefined : Number(args["amountCents"]), now));
         case "report_missing_capability":
           return text(await base.reportMissingCapability(auth, { summary: String(args["summary"] ?? ""), ...(typeof args["nature"] === "string" ? { nature: args["nature"] } : {}), ...(typeof args["severity"] === "string" ? { severity: args["severity"] } : {}) }));
         case "list_my_reports":

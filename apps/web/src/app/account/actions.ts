@@ -1,3 +1,4 @@
+import { DEFAULT_CONSTANTS } from "@agenthill/engine";
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -47,6 +48,8 @@ export async function saveMandate(form: FormData) {
 }
 
 /** Recorded once, with its timestamp. We hold the proof, not Stripe. */
+const { MIN_TOPUP_CENTS, MAX_TOPUP_CENTS } = DEFAULT_CONSTANTS;
+
 export async function waiveWithdrawal(form: FormData) {
   const id = currentAccountId();
   if (!id) redirect("/auth/login");
@@ -58,8 +61,11 @@ export async function waiveWithdrawal(form: FormData) {
 export async function fund(form: FormData) {
   const id = currentAccountId();
   if (!id) redirect("/auth/login");
-  const amount = Number(form.get("amount"));
-  if (![2000, 5000, 10000, 50000].includes(amount)) return;
+  // A quick button carries `amount` in cents; the free field carries whole
+  // dollars. The button wins when both are present (it is what was clicked).
+  const quick = form.get("amount");
+  const amount = quick != null && quick !== "" ? Number(quick) : Math.round(Number(form.get("custom")) * 100);
+  if (!Number.isInteger(amount) || amount < MIN_TOPUP_CENTS || amount > MAX_TOPUP_CENTS) redirect("/account?amount=bad#fuel");
   const acc = await prisma.account.findUnique({ where: { id }, select: { withdrawalWaivedAt: true } });
   if (!acc?.withdrawalWaivedAt) return; // the box has to be ticked first
   // The server owns Stripe; the page asks it for a Checkout URL on the human's behalf.

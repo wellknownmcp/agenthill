@@ -1,3 +1,4 @@
+import { DEFAULT_CONSTANTS } from "@agenthill/engine";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
@@ -30,7 +31,7 @@ function SignedOut() {
   );
 }
 
-export default async function Account({ searchParams }: { searchParams: { funded?: string } }) {
+export default async function Account({ searchParams }: { searchParams: { funded?: string; amount?: string } }) {
   const id = currentAccountId();
   // Deliberately NOT a redirect: a crawler, a link checker or a shared deep
   // link would otherwise start an OAuth dance nobody asked for — which is
@@ -48,6 +49,7 @@ export default async function Account({ searchParams }: { searchParams: { funded
   const granted = credits.filter((c) => c.source === "grant" && (!c.expiresAt || c.expiresAt > now)).reduce((s, c) => s + c.cents, 0);
   const balance = purchased + granted - (debits._sum.cents ?? 0);
   const name = acc.identityName ?? acc.slug ?? "";
+  const { MIN_TOPUP_CENTS, MAX_TOPUP_CENTS } = DEFAULT_CONSTANTS;
 
   return (
     <main className="wrap">
@@ -55,14 +57,21 @@ export default async function Account({ searchParams }: { searchParams: { funded
       <h1 className="disp h1" style={{ fontSize: 40, marginTop: 30 }}>Your account</h1>
       {searchParams.funded === "1" ? <div className="card" style={{ padding: 12, marginTop: 12, background: "#e9f7ee" }}>⛽ Payment received. Credits appear within a minute, once Stripe confirms.</div> : null}
       {searchParams.funded === "0" ? <div className="card" style={{ padding: 12, marginTop: 12 }}>Checkout cancelled. Nothing was charged.</div> : null}
+      {searchParams.amount === "bad" ? <div className="card" style={{ padding: 12, marginTop: 12 }}>Fuel goes from ${MIN_TOPUP_CENTS / 100} to ${MAX_TOPUP_CENTS / 100} at a time. Nothing was charged.</div> : null}
 
       <section className="section" id="fuel">
         <div className="section-head"><h2 className="disp h2">⛽ Fuel</h2><span className="k">prepaid credits · closed loop · non-refundable</span></div>
         <div className="card" style={{ padding: 16, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
           <div><div className="k">Balance</div><div className="disp" style={{ fontSize: 34 }}>{usd(balance)}</div>{granted ? <div className="k">incl. {usd(granted)} granted</div> : null}</div>
           {acc.withdrawalWaivedAt ? (
-            <form action={fund} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {[2000, 5000, 10000, 50000].map((a) => <button key={a} name="amount" value={a} className="pill leaf disp" style={{ fontSize: 15 }}>+{usd(a)}</button>)}
+            <form action={fund} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {[2000, 5000, 10000].map((a) => <button key={a} name="amount" value={a} className="pill leaf disp" style={{ fontSize: 15 }}>+{usd(a)}</button>)}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span className="disp" style={{ fontSize: 15 }}>$</span>
+                <input name="custom" type="number" min={MIN_TOPUP_CENTS / 100} max={MAX_TOPUP_CENTS / 100} step={1} placeholder={String(MIN_TOPUP_CENTS / 100)} aria-label="Other amount in dollars"
+                  style={{ width: 78, padding: "6px 8px", border: "2px solid var(--ink)", borderRadius: 8, font: "inherit", fontSize: 15 }} />
+                <button className="pill disp" style={{ fontSize: 15 }}>Buy</button>
+              </span>
             </form>
           ) : (
             <form action={waiveWithdrawal} style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 460 }}>

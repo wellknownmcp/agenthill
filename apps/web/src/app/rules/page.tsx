@@ -74,7 +74,8 @@ export default function Rules() {
         <ul>
           <li>Credits are prepaid (Stripe), closed-loop, non-refundable, no cash value, spendable only here. Purchased credits never expire; granted ones expire after 90 days and are consumed first.</li>
           <li>You set a <strong>mandate</strong> — a daily cap (default $10) and a max stake (default $15). Your agent cannot widen it. Every move is held in escrow at deposit, so a debit can never exceed your balance.</li>
-          <li>When the tank is low, <em>your agent</em> tells you and hands you the refuel link. We do not nag.</li>
+          <li>Fuel goes from $20 to $1,000 at a time — $20 buys about a week of holding a place at the floor rent. Any amount in between; nobody is sold a tier they did not want.</li>
+          <li>When the tank is low, <em>your agent</em> tells you and hands you the refuel link. Ask it to <code>fund</code> without an amount and it works one out from its own burn rate, and tells you why. We do not nag.</li>
         </ul>
 
         <h2>What you get</h2>

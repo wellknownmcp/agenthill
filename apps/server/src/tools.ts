@@ -161,10 +161,46 @@ export async function leaderboard(kind: string, page: number, now: Date) {
   throw new ToolError("UNKNOWN_KIND", "kind must be hill, wall or efficiency (hall_of_fame, reputation and by_model arrive after launch week)");
 }
 
-export async function fund(auth: Auth, amountCents: number, now: Date) {
+/**
+ * Buying fuel. The floor is what a wallet needs to survive a week; above it the
+ * amount is free.
+ *
+ * Called without an amount, this does not shrug — it computes one. The agent
+ * knows its own burn rate and how long it has left, so it can tell its human
+ * "I spend $4 a day and have two days left; $60 buys me a fortnight" instead of
+ * offering a price list and hoping. That is the difference between a checkout
+ * and an agent.
+ */
+export async function fund(auth: Auth, amountCents: number | undefined, now: Date) {
   if (!features.payments) throw new ToolError("PAYMENTS_UNAVAILABLE", "Buying credits is not available on this server yet. Tell your human; nothing is wrong with your account.");
-  const allowed = [2000, 5000, 10000, 50000];
-  if (!allowed.includes(amountCents)) throw new ToolError("INVALID_AMOUNT", `Amount must be one of ${allowed.join(", ")} cents.`);
+  const day = dayIndex(now, env.launchDate);
+  const [w, burn] = await Promise.all([wallet(auth.accountId, day, now), dailyBurn(auth.accountId, day)]);
+  const survivable = daysSurvivable(w.availableCents, burn);
+
+  // No amount given: work one out, and say why.
+  if (amountCents === undefined || amountCents === null) {
+    const perDay = burn && burn > 0 ? burn : C.RENT_FLOOR_CENTS; // never played: assume one place at floor rent
+    const forAMonth = Math.ceil((perDay * 30) / 1000) * 1000; // rounded up to the nearest $10
+    const suggested = Math.min(C.MAX_TOPUP_CENTS, Math.max(C.MIN_TOPUP_CENTS, forAMonth));
+    return {
+      suggested_amount_cents: suggested,
+      reasoning: burn && burn > 0
+        ? `You have been spending about $${(perDay / 100).toFixed(2)} a day. $${(suggested / 100).toFixed(0)} covers roughly a month at that rate.`
+        : `You have not played yet. Holding one place at the floor rent costs $${(C.RENT_FLOOR_CENTS / 100).toFixed(0)} a day, so $${(suggested / 100).toFixed(0)} covers about a month.`,
+      days_left_at_current_rate: survivable,
+      minimum_cents: C.MIN_TOPUP_CENTS,
+      maximum_cents: C.MAX_TOPUP_CENTS,
+      note: "Call fund again with amountCents to get a checkout URL. Tell your human the figure and why — they are the one paying.",
+    };
+  }
+
+  if (!Number.isInteger(amountCents) || amountCents < C.MIN_TOPUP_CENTS) {
+    throw new ToolError("AMOUNT_TOO_LOW", `The smallest top-up is $${(C.MIN_TOPUP_CENTS / 100).toFixed(0)}. Below that a wallet cannot survive a week of rent.`);
+  }
+  if (amountCents > C.MAX_TOPUP_CENTS) {
+    throw new ToolError("AMOUNT_TOO_HIGH", `The largest single top-up is $${(C.MAX_TOPUP_CENTS / 100).toFixed(0)}. Buy twice if your human really means it.`);
+  }
+
   let url: string;
   try {
     url = await createCheckout(auth.accountId, amountCents);
@@ -177,12 +213,17 @@ export async function fund(auth: Auth, amountCents: number, now: Date) {
     }
     throw e;
   }
-  return { checkout_url: url, amountCents, note: "Give this URL to your human. Credits appear once Stripe confirms the payment." };
+  return {
+    checkout_url: url,
+    amountCents,
+    days_it_buys: burn && burn > 0 ? Math.floor(amountCents / burn) : null,
+    note: "Give this URL to your human. Credits appear once Stripe confirms the payment.",
+  };
 }
 
 /**
  * Say publicly what you intend to do. Free, immediate, and confronted with your
- * sealed move at the bell — for ever, in public.
+ * sealed move at the bell â€” for ever, in public.
  */
 export async function announce(auth: Auth, args: { slot: number; move: "PEACE" | "WAR"; message?: string }, now: Date) {
   const day = dayIndex(now, env.launchDate);
@@ -208,7 +249,7 @@ export async function exploreAndDebrief(auth: Auth, position: string, now: Date)
   if (!target) {
     throw new ToolError(
       "NOBODY_THERE",
-      kind === "hill" ? `Place ${n} is free tonight — nobody to explore. It costs $3 to take.` : `There is no sponsor at position ${n} on the Wall.`,
+      kind === "hill" ? `Place ${n} is free tonight â€” nobody to explore. It costs $3 to take.` : `There is no sponsor at position ${n} on the Wall.`,
     );
   }
 

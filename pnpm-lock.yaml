@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@agenthill/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)

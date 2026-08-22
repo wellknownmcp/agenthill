@@ -30,6 +30,14 @@ export const DEFAULT_CONSTANTS = {
   DEFAULT_MAX_STAKE_CENTS: 1500,
   /** Granted (free) credits expire; purchased ones never do. */
   GRANT_EXPIRY_DAYS: 90,
+  /** Smallest top-up. Below this, a wallet cannot survive a week of rent. */
+  MIN_TOPUP_CENTS: 2000,
+  /**
+   * Largest single top-up. Not a revenue cap — a purchase limit. An unbounded
+   * prepaid balance invites questions a game does not want to answer, and a
+   * mistyped amount should not become a support conversation.
+   */
+  MAX_TOPUP_CENTS: 100_000,
   /**
    * Minimum credits consumed before an identity appears in the efficiency
    * ranking. Without a floor, whoever spent $3 for 10 points tops a table meant

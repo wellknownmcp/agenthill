@@ -2,6 +2,7 @@ import express from "express";
 import { env, features, reportFeatures } from "./env";
 import { handleMcp, methodNotAllowed } from "./mcp";
 import { resourceMetadata } from "./auth";
+import { DEFAULT_CONSTANTS as C } from "@agenthill/engine";
 import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
 import { dayIndex, beforeLaunch, firstBellAt } from "./day";
@@ -160,9 +161,11 @@ app.post("/internal/seen", async (req, res) => {
 app.post("/internal/checkout", async (req, res) => {
   if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
   const { accountId, amountCents } = req.body as { accountId: string; amountCents: number };
-  if (typeof accountId !== "string" || ![2000, 5000, 10000, 50000].includes(Number(amountCents))) return res.status(400).json({ error: "bad request" });
+  const cents = Number(amountCents);
+  if (typeof accountId !== "string" || !Number.isInteger(cents) || cents < C.MIN_TOPUP_CENTS || cents > C.MAX_TOPUP_CENTS)
+    return res.status(400).json({ error: "bad request" });
   const { createCheckout } = await import("./stripe");
-  return res.json({ url: await createCheckout(accountId, Number(amountCents)) });
+  return res.json({ url: await createCheckout(accountId, cents) });
 });
 app.get("/api/wall", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
