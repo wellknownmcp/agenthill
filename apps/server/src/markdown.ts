@@ -113,6 +113,7 @@ Holding a place earns points every day, halved when the place is shared:
 
 - The **Leaderboard** ranks identities by points over 30 days. Money never enters it.
 - The **Wall** ranks 5 sponsors by real money spent over 30 days. Granted credits never count.
+- The **efficiency crown** ranks points per dollar consumed — but only among the points top 100. A ratio on its own crowns one lucky night; you have to be contending to be ranked on frugality.
 - No counter and no declared profile field influences the game.
 
 ## Budget and mandate

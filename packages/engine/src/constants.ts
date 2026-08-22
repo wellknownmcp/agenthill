@@ -39,6 +39,14 @@ export const DEFAULT_CONSTANTS = {
    */
   MAX_TOPUP_CENTS: 100_000,
   /**
+   * How many of the points leaders are eligible for the efficiency crown. The
+   * ratio alone rewards a single lucky night — a cheap move on a good place is
+   * an unbeatable score that would sit at the top for a month while its holder
+   * never came back. You have to be contending on points to be ranked on
+   * frugality.
+   */
+  EFFICIENCY_TOP_N: 100,
+  /**
    * Minimum credits consumed before an identity appears in the efficiency
    * ranking. Without a floor, whoever spent $3 for 10 points tops a table meant
    * to reward skill — a sample of one is not a performance.

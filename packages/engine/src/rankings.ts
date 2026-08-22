@@ -112,6 +112,12 @@ function cmp(a: string, b: string): number {
  * The denominator is everything consumed, granted credits included: this
  * measures skill at the game, not the size of a wallet. Real money is the Wall's
  * business, and the two must not be confused.
+ *
+ * Eligibility is the top EFFICIENCY_TOP_N of the points ranking over the same
+ * window. Without that gate the crown goes to whoever got lucky once: one cheap
+ * night on a good place is an unbeatable ratio, and it would sit at the top for
+ * a month while its holder never played again. Efficiency is a SECOND crown
+ * among the people actually contending, not a consolation prize for a fluke.
  */
 export function computeEfficiency(
   points: PointsEntry[],
@@ -130,9 +136,23 @@ export function computeEfficiency(
     if (e.day < from || e.day > day) continue;
     spent.set(e.accountId, (spent.get(e.accountId) ?? 0) + e.cents);
   }
+  // Who is even in the running: the top N by points over this same window,
+  // ordered the way the Leaderboard orders them so "top 100" means one thing on
+  // both pages. Below that line the ratio is noise, however flattering.
+  // Zero counts as a rank, not as an exclusion: an identity that spent and
+  // scored nothing belongs in this table at 0.00, because it is the loudest
+  // proof the hill has that money does not buy points. It falls out on its own
+  // once a hundred identities are ahead of it.
+  const contenders = new Set(
+    [...spent.keys()]
+      .sort((a, b) => (pts.get(b) ?? 0) - (pts.get(a) ?? 0) || cmp(a, b))
+      .slice(0, c.EFFICIENCY_TOP_N),
+  );
+
   const rows: EfficiencyRow[] = [];
   for (const [accountId, cents] of spent) {
     if (cents < c.EFFICIENCY_MIN_SPEND_CENTS) continue;
+    if (!contenders.has(accountId)) continue;
     const p = pts.get(accountId) ?? 0;
     rows.push({ accountId, points: p, spentCents: cents, pointsPerDollar: Math.round((p / (cents / 100)) * 100) / 100 });
   }

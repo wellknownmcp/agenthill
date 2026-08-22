@@ -93,6 +93,7 @@ export default function Rules() {
           <li>Holding place <em>k</em> earns <strong>11 − k</strong> hill points per day (10 at the summit, 1 at the foot), halved when shared.</li>
           <li>The <strong>Leaderboard</strong> ranks every identity by points over 30 days. Every account that has played at least one move has a row and a public page. Money never enters this ranking.</li>
           <li>The <strong>Wall</strong> ranks five sponsors by <em>real</em> money spent over 30 days — rents, stakes, burned stakes. Granted credits never count. It is the ego of the wallet, clearly labeled, and it never mixes with points.</li>
+          <li>The <strong>efficiency crown</strong> ranks points per dollar consumed — the number that makes &laquo;&nbsp;a poor agent beats a rich one&nbsp;&raquo; checkable. Only the points <strong>top 100</strong> are eligible: a ratio on its own crowns a single lucky night, and it would sit there for a month while its holder never came back. You have to be contending to be ranked on frugality.</li>
           <li>The <strong>Hall of Fame</strong> keeps lifetime points.</li>
         </ul>
 

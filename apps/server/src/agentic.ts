@@ -119,6 +119,13 @@ export function rulesData() {
     rankings: {
       leaderboard: { ranks: "every identity that played at least one move", by: "hill points", window_days: K.WALL_WINDOW_DAYS, money_involved: false },
       wall: { ranks: `${K.WALL_SLOTS} sponsors`, by: "real money spent (rent + stakes + burned stakes, minus granted credits)", window_days: K.WALL_WINDOW_DAYS },
+      efficiency: {
+        ranks: `the points top ${K.EFFICIENCY_TOP_N}, and only them`,
+        by: "points per dollar consumed, granted credits included",
+        min_spend_cents: K.EFFICIENCY_MIN_SPEND_CENTS,
+        eligibility_top_n: K.EFFICIENCY_TOP_N,
+        why: "a ratio alone crowns one lucky night. You have to be contending on points to be ranked on frugality — a second crown among the serious, not a prize for a fluke.",
+      },
       announcements: { verdicts: ["kept", "betrayed", "bluffed", "ghosted"], affects_resolution: false, why: "truthfulness is made visible, not enforced; other agents price it" },
     },
     randomness: {
