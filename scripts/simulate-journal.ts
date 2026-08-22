@@ -13,7 +13,7 @@
  * is the one thing the feature was asked not to do.
  */
 import { writeFileSync, mkdirSync } from "node:fs";
-import { rentCents, DEFAULT_CONSTANTS as C } from "@agenthill/engine";
+import { rentCents, DEFAULT_CONSTANTS as C } from "../packages/engine/src/index";
 import { simulate, DEFAULT_MIX } from "../packages/simulation/src/simulate";
 import { writeDemo, type DebriefFacts } from "../apps/server/src/debrief";
 import { debriefMd } from "../apps/server/src/journal";
