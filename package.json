@@ -16,7 +16,8 @@
     "simulate": "pnpm --filter @agenthill/simulation report",
     "db:generate": "pnpm --filter @agenthill/server exec prisma generate --schema ../../prisma/schema.prisma",
     "db:push": "pnpm --filter @agenthill/server exec prisma db push --schema ../../prisma/schema.prisma",
-    "gsc": "node scripts/gsc-query.mjs"
+    "gsc": "node scripts/gsc-query.mjs",
+    "oauth:register": "node scripts/register-oauth-client.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

@@ -1,8 +1,14 @@
 /**
- * The page is itself an OAuth client of the Animam AS (authorization code +
- * PKCE, confidential client registered once through DCR and kept in the
- * database). The token it obtains is only used to learn `sub`: the human's
- * account id. Nothing else is stored from it.
+ * The page is itself an OAuth client of the Animam AS: authorization code +
+ * PKCE, registered once through DCR and kept in the database. The token it
+ * obtains is only used to learn `sub` — the human's account id. Nothing else is
+ * stored from it.
+ *
+ * PUBLIC client, not confidential: this authorization server only issues
+ * `token_endpoint_auth_method: "none"`. Asking for a client secret is refused
+ * with 400, and retrying that on every visit is what got us rate-limited. PKCE
+ * is what protects the exchange, and the redirect URI is registered — which is
+ * the standard posture for this flow anyway.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { decodeJwt } from "jose";
@@ -21,9 +27,9 @@ export class SignInUnavailable extends Error {
 
 /** Registering is done once, ever. Memoised in process so a burst of requests
  *  cannot turn into a burst of registrations against the authorization server. */
-let memo: Promise<{ clientId: string; clientSecret: string }> | null = null;
+let memo: Promise<{ clientId: string }> | null = null;
 
-export async function clientCredentials(): Promise<{ clientId: string; clientSecret: string }> {
+export async function clientCredentials(): Promise<{ clientId: string }> {
   if (!memo) {
     memo = register().catch((e) => {
       memo = null; // a failure must not be cached for ever
@@ -33,12 +39,11 @@ export async function clientCredentials(): Promise<{ clientId: string; clientSec
   return memo;
 }
 
-async function register(): Promise<{ clientId: string; clientSecret: string }> {
+async function register(): Promise<{ clientId: string }> {
   const envId = process.env.OAUTH_CLIENT_ID;
-  const envSecret = process.env.OAUTH_CLIENT_SECRET;
-  if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
+  if (envId) return { clientId: envId };
   const row = await prisma.oauthClientRegistration.findUnique({ where: { id: "web" } });
-  if (row) return { clientId: row.clientId, clientSecret: row.clientSecret };
+  if (row) return { clientId: row.clientId };
   // Dynamic Client Registration (RFC 7591), once.
   const r = await fetch(`${ISSUER}/oauth/register`, {
     method: "POST",
@@ -49,20 +54,20 @@ async function register(): Promise<{ clientId: string; clientSecret: string }> {
       redirect_uris: [REDIRECT_URI],
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
-      token_endpoint_auth_method: "client_secret_post",
+      token_endpoint_auth_method: "none",
       scope: "hill:read hill:play",
     }),
   });
   if (!r.ok) throw new SignInUnavailable(`the authorization server refused to register this app (${r.status})`);
-  const j = (await r.json()) as { client_id: string; client_secret?: string };
-  if (!j.client_secret) throw new SignInUnavailable("the authorization server returned no client secret");
+  const j = (await r.json()) as { client_id: string };
+  if (!j.client_id) throw new SignInUnavailable("the authorization server returned no client id");
   // upsert, not create: two requests racing must not lose the registration.
   await prisma.oauthClientRegistration.upsert({
     where: { id: "web" },
-    create: { id: "web", clientId: j.client_id, clientSecret: j.client_secret },
-    update: { clientId: j.client_id, clientSecret: j.client_secret },
+    create: { id: "web", clientId: j.client_id, clientSecret: "" },
+    update: { clientId: j.client_id },
   });
-  return { clientId: j.client_id, clientSecret: j.client_secret };
+  return { clientId: j.client_id };
 }
 
 export function pkce(): { verifier: string; challenge: string } {
@@ -86,8 +91,9 @@ export async function authorizeUrl(state: string, challenge: string): Promise<st
 }
 
 export async function exchangeCode(code: string, verifier: string): Promise<{ accountId: string; slug?: string; email?: string }> {
-  const { clientId, clientSecret } = await clientCredentials();
-  const body = new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, client_id: clientId, client_secret: clientSecret, code_verifier: verifier, resource: RESOURCE });
+  const { clientId } = await clientCredentials();
+  // No client_secret: this is a public client, PKCE is the proof.
+  const body = new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, client_id: clientId, code_verifier: verifier, resource: RESOURCE });
   const r = await fetch(`${ISSUER}/oauth/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body });
   if (!r.ok) throw new Error(`token exchange failed: ${r.status}`);
   const j = (await r.json()) as { access_token: string };
