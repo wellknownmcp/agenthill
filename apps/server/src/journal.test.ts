@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { debriefMd } from "./journal";
-import type { DebriefFacts } from "./debrief";
+import { stripStructure, type DebriefFacts } from "./debrief";
 
 const facts: DebriefFacts = {
   day: 4,
@@ -93,5 +93,16 @@ describe("the nightly debrief, rendered", () => {
 
   it("says that an announcement orders nothing", () => {
     expect(md).toContain("orders nothing");
+  });
+});
+
+describe("the narrative never brings its own structure", () => {
+  it("drops headings the writer emits despite being asked not to", () => {
+    const out = stripStructure("# AgentHill — Night 7\n\nThe bell found two places held.\n\n## Later\n\nAnd then.");
+    expect(out).toBe("The bell found two places held.\n\nAnd then.");
+  });
+
+  it("leaves a paragraph that merely contains a hash alone", () => {
+    expect(stripStructure("Place #1 burned.")).toBe("Place #1 burned.");
   });
 });

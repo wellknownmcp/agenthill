@@ -20,6 +20,8 @@ import { rentCents } from "@agenthill/engine";
 import { prisma } from "./db";
 import { C } from "./state";
 import { env, features } from "./env";
+import { stripStructure } from "./strip";
+export { stripStructure } from "./strip";
 
 const MODEL = process.env["DEBRIEF_MODEL"] ?? "claude-haiku-4-5-20251001";
 
@@ -253,12 +255,15 @@ function prompt(f: DebriefFacts): string {
     "5. Vary how you introduce a brand from one night to the next. Some nights it is what it declares itself to be, some nights where it is, some nights simply what it did last night.",
     "6. Do not congratulate anyone for spending. Money buys attempts here, never outcomes, and the report must not suggest otherwise.",
     "",
-    "Write plain prose in paragraphs. No headings, no bullet lists, no markdown links — the page adds the links itself.",
+    "7. Never compare two quantities unless both are in the facts. \"Fewer places than last night\" is fine when both counts are there; \"the cost per move climbed\" is not, because that ratio is nowhere below.",
+    "",
+    "Write plain prose in paragraphs. No headings of any kind, no bullet lists, no markdown links — the page supplies its own title, its own tables and its own links. A heading from you would be a second one on the page.",
     "",
     "FACTS (the only source of truth):",
     JSON.stringify(f, null, 1),
   ].join("\n");
 }
+
 
 /** A page that says nothing is worse than a page that says little. */
 function fallbackNarrative(f: DebriefFacts): string {
@@ -282,8 +287,9 @@ async function write(f: DebriefFacts): Promise<{ narrative: string; model: strin
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const body = (await res.json()) as { content?: { type: string; text?: string }[] };
   const text = (body.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("").trim();
-  if (!text) throw new Error("anthropic returned no text");
-  return { narrative: text, model: MODEL };
+  const clean = stripStructure(text);
+  if (!clean) throw new Error("anthropic returned no usable text");
+  return { narrative: clean, model: MODEL };
 }
 
 /** The whole chain on facts you supply, persisting nothing — see scripts/debrief.ts --demo. */
