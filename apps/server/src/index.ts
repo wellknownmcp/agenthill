@@ -4,6 +4,7 @@ import { handleMcp, methodNotAllowed, TOOL_NAMES } from "./mcp";
 import { resourceMetadata } from "./auth";
 import { DEFAULT_CONSTANTS as C } from "@agenthill/engine";
 import { debriefMd, journalIndexMd } from "./journal";
+import { mcpStats } from "./events";
 import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
 import { dayIndex, beforeLaunch, firstBellAt } from "./day";
@@ -148,6 +149,43 @@ app.get("/api/hill", async (req, res) => {
   });
 });
 /** The rules as data: an agent should compute a strategy, not parse prose. */
+/**
+ * The aggregate, public. Every figure is a count over a window, so nothing here
+ * can say what one identity did tonight — which is exactly what makes it
+ * publishable while moves are sealed.
+ */
+app.get("/api/mcp-stats", async (req, res) => {
+  const days = Math.min(90, Math.max(1, Number(req.query["days"] ?? 30) || 30));
+  const stats = await mcpStats(days);
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  return res.json({ ...stats, ...agentLinks([{ rel: "raw-export", href: `${env.mcpUrl}/admin/events.jsonl`, what: "the raw event stream, operator credentials required" }]) });
+});
+
+/**
+ * The raw stream, gated. Not because the rows are secret in themselves — no
+ * argument is stored — but because "this agent called play at 21:40" is still a
+ * participation signal on a day whose moves are sealed. One JSON object per
+ * line, so it pipes straight into an analytics tool without a parser.
+ */
+app.get("/admin/events.jsonl", async (req, res) => {
+  if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
+  const sinceId = req.query["since"] ? BigInt(String(req.query["since"])) : undefined;
+  const limit = Math.min(50_000, Math.max(1, Number(req.query["limit"] ?? 10_000) || 10_000));
+  const rows = await prisma.mcpEvent.findMany({
+    where: sinceId === undefined ? {} : { id: { gt: sinceId } },
+    orderBy: { id: "asc" },
+    take: limit,
+  });
+  res.type("application/x-ndjson; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  // The cursor for the next pull, so an exporter never re-reads or skips a row.
+  if (rows.length) res.setHeader("X-Last-Event-Id", String(rows[rows.length - 1]!.id));
+  const NL = String.fromCharCode(10);
+  const body = rows.map((r) => JSON.stringify({ ...r, id: String(r.id), at: r.at.toISOString() })).join(NL);
+  return res.send(rows.length ? body + NL : body);
+});
+
 app.get("/api/rules", (_req, res) => {
   machine(res);
   res.setHeader("Cache-Control", "public, max-age=3600");

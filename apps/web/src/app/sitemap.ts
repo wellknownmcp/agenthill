@@ -13,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${web}/rules`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${web}/links`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
     { url: `${web}/journal`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
+    { url: `${web}/data`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
   ];
   // Indexed identities only: at least one valid move (§7 ter — registering alone
   // gets no link). A database that is down must not take the sitemap with it.

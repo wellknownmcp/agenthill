@@ -258,3 +258,32 @@ model DayDebrief {
   generatedAt DateTime @default(now())
   @@index([generatedAt])
 }
+
+/// One row per MCP request. The web side of this product is ordinary; the MCP
+/// side is not, and nobody publishes what agents actually DO with a tool server.
+///
+/// What is deliberately NOT stored: arguments. A move's place and stake are
+/// sealed until the bell, and an event log that carried them would be a hole in
+/// the game straight through the telemetry. Tool name, outcome and timing only.
+model McpEvent {
+  id        BigInt   @id @default(autoincrement())
+  at        DateTime @default(now())
+  day       Int
+  /// initialize | tools/list | tools/call | unauthorized | other
+  method    String
+  /// the tool, when method is tools/call
+  tool      String?
+  /// ok | the ToolError code | http status for a rejected request
+  outcome   String
+  ms        Int
+  /// Null when the caller never got past the door — which is itself worth counting.
+  accountId String?
+  agentId   String?
+  /// Declared by the client at initialize: name, version, protocol.
+  client    String?
+  clientVer String?
+  protocol  String?
+  @@index([at])
+  @@index([day, tool])
+  @@index([method, at])
+}

@@ -12,6 +12,7 @@ import * as game from "./tools";
 import * as base from "./baseline";
 import { setProfile, SECTORS } from "./profile";
 import { take, LIMITS, type Limit } from "./ratelimit";
+import * as events from "./events";
 
 /**
  * Output schemas are a promise the CLIENT enforces: the SDK refuses a result
@@ -309,6 +310,16 @@ function buildServer(auth: Auth): Server {
     const name = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     const now = new Date();
+    const started = Date.now();
+    // Instrumentation lives around the whole call so a rate limit, a missing
+    // scope and a thrown ToolError are all counted as what they are. `env` is
+    // read from the closure; arguments are never touched.
+    let counted = false;
+    const done = (outcome: string) => {
+      if (counted) return;
+      counted = true;
+      events.record({ method: "tools/call", tool: name, outcome, ms: Date.now() - started, accountId: auth.accountId, agentId: auth.agentId }, now);
+    };
     try {
       // Per agent, per tool. An agent that polls too eagerly is slowed, never
       // locked out of a game its human pays for — and the answer says when to
@@ -357,8 +368,14 @@ function buildServer(auth: Auth): Server {
           throw new game.ToolError("UNKNOWN_TOOL", `Unknown tool ${name}`);
       }
     } catch (e) {
-      if (e instanceof game.ToolError) return { ...text({ error: e.code, message: e.message }), isError: true };
+      if (e instanceof game.ToolError) {
+        done(e.code);
+        return { ...text({ error: e.code, message: e.message }), isError: true };
+      }
+      done("THREW");
       throw e;
+    } finally {
+      done("ok");
     }
   });
   return server;
@@ -366,7 +383,11 @@ function buildServer(auth: Auth): Server {
 
 export async function handleMcp(req: Request, res: Response) {
   const auth = await authenticate(req);
-  if (!auth) return unauthorized(res, req.headers.authorization ? "invalid_token" : "missing_token");
+  if (!auth) {
+    const e = events.readEnvelope(req.body);
+    events.record({ method: "unauthorized", outcome: req.headers.authorization ? "invalid_token" : "missing_token", ms: 0, client: e.client, clientVer: e.clientVer, protocol: e.protocol });
+    return unauthorized(res, req.headers.authorization ? "invalid_token" : "missing_token");
+  }
   await ensureIdentity(auth);
   const server = buildServer(auth);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -375,7 +396,24 @@ export async function handleMcp(req: Request, res: Response) {
     void server.close();
   });
   await server.connect(transport);
+  const env0 = events.readEnvelope(req.body);
+  const t0 = Date.now();
   await transport.handleRequest(req, res, req.body);
+  // tools/call records itself, with its own outcome and timing; here we count
+  // the envelope traffic that never reaches a tool — which is where the client
+  // name and the negotiated protocol version live.
+  if (env0.method !== "tools/call") {
+    events.record({
+      method: env0.method,
+      outcome: String(res.statusCode),
+      ms: Date.now() - t0,
+      accountId: auth.accountId,
+      agentId: auth.agentId,
+      client: env0.client,
+      clientVer: env0.clientVer,
+      protocol: env0.protocol,
+    });
+  }
 }
 
 export function methodNotAllowed(_req: Request, res: Response) {
