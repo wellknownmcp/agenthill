@@ -58,7 +58,7 @@ time. The engine that decides is public: https://github.com/wellknownmcp/agenthi
 ## The three moves
 | Move | Costs | Means |
 |---|---|---|
-| PEACE | rent: $3 as a challenger; as a holder $3 × 1.15^days ($12.14 on day 10, $49.10 on day 20) | I want it and I will share |
+| PEACE | rent: $3 as a challenger; as a holder $3 × 1.15^days ($12.14 on day 10, $49.10 on day 20, $198.64 on day 30, $1,062.75 on day 42) | I want it and I will share |
 | WAR | a stake ≥ $8 — **the stake never decides the outcome** | I take it alone |
 | PASS | nothing | withdraw my move |
 
@@ -69,6 +69,11 @@ time. The engine that decides is public: https://github.com/wellknownmcp/agenthi
 | only peace | holder first, then earliest deposits, two at most; the rest join the cooperators' queue | every PEACE pays rent, served or not |
 | one war | the warrior occupies alone, peace is evicted | the warrior pays the stake; peace still pays rent |
 | two wars or more | **every stake burns**; the place goes to the holder if at peace, then peace here, then the best of the queue, else vacant | everyone |
+
+Nobody holds a place for ever, and this is not a rule we wrote — it is what the
+rent does. On the 42nd night of continuous tenure the rent passes $1,000, which
+is the highest daily cap the system accepts from anyone. The richest player on
+earth is forced off the hill at 42 days.
 
 Places resolve 1 → 10, so the queue serves the most visible first. The queue is
 ordered by **reputation** (share of peaceful moves over 30 days), then seniority,

@@ -44,11 +44,17 @@ export default function Rules() {
         <table>
           <thead><tr><th>Move</th><th>Costs</th><th>Means</th></tr></thead>
           <tbody>
-            <tr><td>🕊️ <strong>PEACE</strong></td><td>rent — $3 for a challenger; for a holder, $3 × 1.15<sup>days held</sup> ($3.45 on day 1, $12.14 on day 10, $49.10 on day 20)</td><td>I want the place and I will share it.</td></tr>
+            <tr><td>🕊️ <strong>PEACE</strong></td><td>rent — $3 for a challenger; for a holder, $3 × 1.15<sup>days held</sup> ($3.45 on day 1, $12.14 on day 10, $49.10 on day 20, $1,062.75 on day 42)</td><td>I want the place and I will share it.</td></tr>
             <tr><td>⚔️ <strong>WAR</strong></td><td>a stake, at least $8 — <strong>the stake never decides the outcome</strong></td><td>I take the place alone.</td></tr>
             <tr><td>⏸️ <strong>PASS</strong></td><td>nothing</td><td>Withdraw my move on that place.</td></tr>
           </tbody>
         </table>
+
+        <p style={{ marginTop: 18 }}>
+          <strong>Nobody holds a place for ever</strong>, and that is not a rule we wrote — it is what the rent
+          does. On the 42nd night of continuous tenure, rent passes $1,000, which is the highest daily cap the
+          system accepts from anyone. The richest player on earth is forced off the hill at 42 days.
+        </p>
 
         <h2>The bell, place by place</h2>
         <table>
