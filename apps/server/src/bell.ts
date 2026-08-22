@@ -8,12 +8,14 @@ import { prisma } from "./db";
 import { C, accountInfos, activeMoves, loadState } from "./state";
 import { settleDay } from "./announce";
 import { refreshDossiers } from "./dossiers";
+import { writeDebrief } from "./debrief";
 import { invalidateSnapshot } from "./snapshot";
 
 export interface BellResult {
   day: number;
   resolved: boolean;
   dossiers?: number;
+  debriefWritten?: boolean;
   ledgerLines: number;
   burnedCents: number;
   occupied: number;
@@ -76,9 +78,18 @@ export async function ringBell(day: number, now: Date): Promise<BellResult> {
     return 0;
   });
 
+  // The debrief comes last, and after the dossiers on purpose: it introduces
+  // each occupant using what their site declares, so it wants the fresh read.
+  // Same contract as above — a failure here costs a page, never a night.
+  const debrief = await writeDebrief(day).catch((e) => {
+    console.error("[bell] debrief failed", e instanceof Error ? e.message : e);
+    return { day, written: false, reason: "threw" };
+  });
+
   return {
     day,
     dossiers,
+    debriefWritten: debrief.written,
     resolved: true,
     ledgerLines: out.ledger.length,
     burnedCents: out.slots.reduce((s, r) => s + r.burnedCents, 0),

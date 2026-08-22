@@ -244,3 +244,17 @@ model Exploration {
   @@id([day, accountId, explorerId])
   @@index([accountId, day])
 }
+
+/// The debrief of one night: what happened, told twice. `facts` is computed by
+/// code and is the only source of any number; `narrative` is written from it by
+/// a model that is forbidden to add one. Keeping them in the same row is what
+/// lets us regenerate the prose without touching the arithmetic, and check the
+/// prose against the arithmetic whenever we want to.
+model DayDebrief {
+  day         Int      @id
+  facts       Json
+  narrative   String
+  model       String
+  generatedAt DateTime @default(now())
+  @@index([generatedAt])
+}

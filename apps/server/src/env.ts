@@ -38,6 +38,9 @@ export const env = {
   resendApiKey: optional("RESEND_API_KEY"),
   /** Browser Rendering: exploration fetches run on Cloudflare, never from this VPS. */
   cfAccountId: optional("CLOUDFLARE_ACCOUNT_ID"),
+  /** The nightly debrief is written by a model. Without a key, the night still
+   *  resolves and the page still shows the figures — only the prose is missing. */
+  anthropicApiKey: optional("ANTHROPIC_API_KEY"),
   cfApiToken: process.env.CLOUDFLARE_BROWSER_TOKEN || process.env.CLOUDFLARE_API_TOKEN || "",
   /** IndexNow: Bing, Yandex, Naver, Seznam. Not Google, not Brave. */
   indexNowKey: optional("INDEXNOW_KEY"),
@@ -52,6 +55,7 @@ export const features = {
   email: Boolean(env.resendApiKey),
   exploration: Boolean(env.cfAccountId && env.cfApiToken),
   indexnow: Boolean(env.indexNowKey),
+  debrief: Boolean(env.anthropicApiKey),
 };
 
 /** Say it once, loudly, at boot — a silent missing feature is how you discover
@@ -59,5 +63,6 @@ export const features = {
 export function reportFeatures(log: (m: string) => void): void {
   if (!features.payments) log("[agenthill] payments DISABLED — STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET missing. fund() will refuse.");
   if (!features.email) log("[agenthill] email DISABLED — RESEND_API_KEY missing. Nothing will be sent.");
+  if (!features.debrief) log("[agenthill] debrief prose DISABLED — ANTHROPIC_API_KEY missing. Nights will resolve and the figures will publish; nobody will tell the story.");
   if (!features.exploration) log("[agenthill] exploration DISABLED — CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN missing. explore_and_debrief will say so.");
 }

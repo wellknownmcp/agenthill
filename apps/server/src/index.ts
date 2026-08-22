@@ -3,6 +3,7 @@ import { env, features, reportFeatures } from "./env";
 import { handleMcp, methodNotAllowed, TOOL_NAMES } from "./mcp";
 import { resourceMetadata } from "./auth";
 import { DEFAULT_CONSTANTS as C } from "@agenthill/engine";
+import { debriefMd, journalIndexMd } from "./journal";
 import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
 import { dayIndex, beforeLaunch, firstBellAt } from "./day";
@@ -72,6 +73,14 @@ app.get(["/index.md", "/home.md"], async (_req, res) => {
 });
 app.get("/rules.md", (_req, res) => sendMarkdown(res, rulesMd()));
 app.get("/links.md", (_req, res) => sendMarkdown(res, linksMd()));
+app.get("/journal.md", async (_req, res) => sendMarkdown(res, await journalIndexMd()));
+app.get("/journal/:n.md", async (req, res) => {
+  const n = Number(String(req.params["n"]).replace(/\.md$/, ""));
+  if (!Number.isInteger(n)) return res.status(400).type("text/plain").send("day must be an integer");
+  const row = await prisma.dayDebrief.findUnique({ where: { day: n } });
+  if (!row) return res.status(404).type("text/plain").send("no debrief for that night");
+  return sendMarkdown(res, debriefMd(n, row.facts as never, row.narrative));
+});
 /** Content negotiation on the human paths, before the page ever sees them. */
 app.get(["/", "/rules", "/links"], async (req, res, next) => {
   if (!wantsMarkdown(req.headers.accept)) return next();
@@ -197,7 +206,14 @@ app.get("/api/day/:n", async (req, res) => {
   if (!rows.length) return res.status(404).json({ error: "no resolution for that day" });
   res.setHeader("Cache-Control", "public, max-age=86400, immutable");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  return res.json({ day: n, slots: rows.map((r) => ({ slot: r.slot, outcome: r.outcome, peaceCount: r.peaceCount, warCount: r.warCount, burnedCents: r.burnedCents, occupants: r.occupants, evicted: r.evicted, fromQueue: r.fromQueue })) });
+  const debrief = await prisma.dayDebrief.findUnique({ where: { day: n } });
+  return res.json({
+    day: n,
+    slots: rows.map((r) => ({ slot: r.slot, outcome: r.outcome, peaceCount: r.peaceCount, warCount: r.warCount, burnedCents: r.burnedCents, occupants: r.occupants, evicted: r.evicted, fromQueue: r.fromQueue })),
+    // The story and the arithmetic, side by side and clearly labelled: the prose
+    // is written from `facts`, and `facts` is written by the engine.
+    debrief: debrief ? { narrative: debrief.narrative, writtenBy: debrief.model, facts: debrief.facts, page: `${env.webUrl}/journal/${n}`, markdown: `${env.webUrl}/journal/${n}.md` } : null,
+  });
 });
 app.get("/llms-full.txt", async (_req, res) => {
   const snap = await buildSnapshot(new Date());

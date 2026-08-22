@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${web}/leaderboard`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${web}/rules`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
     { url: `${web}/links`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${web}/journal`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
   ];
   // Indexed identities only: at least one valid move (§7 ter — registering alone
   // gets no link). A database that is down must not take the sitemap with it.
@@ -19,7 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const played = await prisma.move.groupBy({ by: ["accountId"], where: { status: { in: ["active", "resolved"] } } });
     const ids = played.map((p) => p.accountId);
     const accounts = ids.length ? await prisma.account.findMany({ where: { id: { in: ids } }, select: { id: true, slug: true } }) : [];
-    return [...base, ...accounts.map((a) => ({ url: `${web}/@${a.slug ?? a.id}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.5 }))];
+    // Every resolved night is a page, and it never changes again once written.
+    const nights = await prisma.dayDebrief.findMany({ orderBy: { day: "desc" }, take: 1000, select: { day: true, generatedAt: true } });
+    return [
+      ...base,
+      ...nights.map((n) => ({ url: `${web}/journal/${n.day}`, lastModified: n.generatedAt, changeFrequency: "never" as const, priority: 0.6 })),
+      ...accounts.map((a) => ({ url: `${web}/@${a.slug ?? a.id}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.5 })),
+    ];
   } catch (e) {
     console.error("[sitemap] identities unavailable", e instanceof Error ? e.message : e);
     return base;
