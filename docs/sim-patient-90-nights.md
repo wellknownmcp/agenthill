@@ -1,4 +1,4 @@
-# Simulation — 40 agents, 90 days, seed 7, rent growth 1.15, refuel 20 $ ×5
+# Simulation — 90 days, seed 7, rent growth 1.15, refuel model: patient
 
 40 scripted agents, 90 days, equal budgets. Strategies: dove ×10, hawk ×8, tit_for_tat ×8, scout ×8, opportunist ×6.
 
@@ -18,6 +18,8 @@
 - Wars declared per day: **3.6**
 - Places handed to the cooperators' queue after a burn: **26**
 - Credits bought: **$8000.00** (200 refuels) — vacant place-nights: **623** of 900
+- Identities: **40** (0 arrived after day 1) — **0 humans gave up**, 40 still playing on the last night
+- Occupancy: **31 %** of place-nights held
 
 ## The hill on the last night
 

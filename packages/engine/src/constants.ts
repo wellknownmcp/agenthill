@@ -54,4 +54,10 @@ export const DEFAULT_CONSTANTS = {
   EFFICIENCY_MIN_SPEND_CENTS: 500,
 } as const;
 
-export type Constants = { -readonly [K in keyof typeof DEFAULT_CONSTANTS]: (typeof DEFAULT_CONSTANTS)[K] };
+/**
+ * Widened to `number` on purpose. Mapping the literal types of DEFAULT_CONSTANTS
+ * made `Partial<Constants>` accept only the default value of each field, so a
+ * simulation could not be swept over a range of, say, RENT_GROWTH — the one
+ * thing an overridable constants object exists for.
+ */
+export type Constants = { -readonly [K in keyof typeof DEFAULT_CONSTANTS]: number };

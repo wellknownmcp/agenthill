@@ -15,6 +15,8 @@ export function markdownReport(r: SimResult, title: string): string {
   lines.push(`- Wars declared per day: **${r.totals.warsPerDay.toFixed(1)}**`);
   lines.push(`- Places handed to the cooperators' queue after a burn: **${r.totals.queueServed}**`);
   lines.push(`- Credits bought: **${usd(r.totals.purchasedCents)}** (${r.totals.refuels} refuels) — vacant place-nights: **${r.totals.vacantSlotNights}** of ${r.days * 10}`);
+  lines.push(`- Identities: **${r.totals.identities}** (${r.totals.arrived} arrived after day 1) — **${r.totals.quits} humans gave up**, ${r.totals.activeAtEnd} still playing on the last night`);
+  lines.push(`- Occupancy: **${(100 - (r.totals.vacantSlotNights / (r.days * 10)) * 100).toFixed(0)} %** of place-nights held`);
   lines.push("", "## The hill on the last night", "", "| Place | Held by | Days held |", "|---|---|---|");
   r.finalState.slots.forEach((s, i) => {
     lines.push(`| ${i + 1} | ${s.occupants.map((o) => `${o.accountId}`).join(" · ") || "— vacant —"} | ${s.occupants.map((o) => o.daysHeld).join(" · ")} |`);

@@ -1,62 +1,81 @@
 # Several nights of battle — what the runs say
 
-Three horizons, same seed (7), same field: 40 scripted agents, equal budgets,
-$20 refuels capped at five each. Full reports in `sim-7-nights.md`,
-`sim-30-nights.md`, `sim-90-nights.md`.
+Two models of the same game, because the first one was answering a question
+nobody asked.
 
-## Money loses, and it loses badly
+**patient** — the original. A fixed cohort of 40, nobody ever joins, and anyone
+short of money is topped up automatically, five times. It assumes an infinitely
+patient wallet and a sealed world.
 
-| | 7 nights | 30 nights | 90 nights |
-|---|---|---|---|
-| dove — points per $ | 0.63 | 0.53 | 0.46 |
-| scout | 0.25 | 0.30 | 0.38 |
-| tit for tat | 0.20 | 0.22 | 0.29 |
-| opportunist | 0.09 | 0.04 | 0.04 |
-| **hawk** | **0.04** | **0.05** | **0.05** |
+**ego** — what actually drives this product. Nobody is topped up by a counter: a
+human pays when there is a **place to defend** (85%), or a **rank in reach** —
+points top 20, or a slot on the Wall (50%) — and otherwise rarely (12%). After a
+**fortnight with no place at all**, they give up for good. And new identities
+arrive every day, because somebody read the journal.
 
-Eight hawks spent **$1,600 and burned $1,528 of it** — 96% of their money bought
-nothing at all — for 77 points and nine agent-days on the hill. Ten doves spent
-less and took 810 points. The claim on the home page is not marketing.
+Same seed (7), same strategy mix, same rent curve.
 
-## The hawks are dead by day 30
+## The closed cohort was hiding the whole business
 
-Their figures are *identical* at 30 and at 90 nights: $1,600 spent, 77 points,
-9 agent-days. They went broke in the first month and never played again. The
-same is true of the opportunists.
+| 90 nights | patient | ego |
+|---|---|---|
+| Identities | 40 | **93** (53 arrived) |
+| Humans who gave up | 0 | **55** |
+| Still playing on the last night | 40 | 38 |
+| **Occupancy** | **31%** | **71%** |
+| Spent | $7,953 | **$12,164** |
+| Burn ratio | 32% | 28% |
+| Wars per day | 3.6 | 6.2 |
 
-That is why the game pacifies itself over time: wars per day fall from **10.9 to
-3.6**, and the burn ratio from **47% to 32%**. Aggression is self-liquidating.
+The empty hill I reported this morning was an artefact of a world nobody could
+join. With arrivals, **occupancy more than doubles** and the hill stays busy for
+ninety nights. At thirty nights — the horizon that matters for launch —
+occupancy is **69%**, with 57 identities, 17 of them arrived after day one.
 
-## The failure mode is not war. It is emptiness.
+## Churn is the number to plan against
 
-| | vacant place-nights |
-|---|---|
-| 7 nights | 37 of 70 — **53%** |
-| 30 nights | 107 of 300 — **36%** |
-| 90 nights | 623 of 900 — **69%** |
+**55 of 93 humans gave up over ninety nights — 59%.** They funded an agent, got
+nothing for a fortnight, and stopped. That is not a failure of the model; it is
+the model telling us what the funnel costs. The hill survives it because
+arrivals outpace departures, and it only survives while that stays true.
 
-By night 90 the hill is *entirely vacant*: every strategy has exhausted its five
-refuels and stopped. Real humans are not capped at five, so the 90-night figure
-is an artefact — but the direction is not. **The hill lives or dies on continued
-refuelling, and its visible failure state is an empty hill, not a war.**
+At thirty nights the churn is far gentler: 12 of 57 (21%). **The attrition is
+back-loaded** — people leave after weeks of nothing, not after a bad night. Read
+that as a deadline: an identity that has never held a place by its second week
+is probably lost.
 
-Two consequences for launch:
-- On the first nights most places will be free, and the journal will say so in
-  plain words. Better that than a page pretending to be busy.
-- The thing to watch in the first week is not burn, it is **occupancy**. A
-  vacant place is a link nobody is buying.
+## Money still loses — but the margin is a fifth of what the first run claimed
 
-## A caveat on the efficiency crown
+| points per $ | patient (90n) | ego (90n) |
+|---|---|---|
+| dove | 0.46 | 0.51 |
+| hawk | **0.05** | **0.25** |
+| gap | **9×** | **2×** |
 
-At the strategy level, doves lead points *and* points per dollar — so the second
-crown may not produce a second winner. These reports aggregate by strategy, not
-by agent, so an individual frugal agent may well top the ratio without topping
-the points; the runs cannot say. Worth measuring on real play before claiming
-the crown creates a distinct champion.
+In the closed cohort, hawks burned themselves to extinction and never came back,
+so their lifetime ratio collapsed. In a churning population there are always
+freshly vacant places, and a hawk that takes one gets refuelled by the very ego
+that makes it fight. Doves still win — 0.51 against 0.25 — but **"money loses
+badly" is a claim from the sealed model. "Money loses" survives; "badly" does
+not.**
 
-## What the runs do not model
+Nothing on the site claims a margin, so nothing needs correcting. But if a
+number ever goes in the copy, it comes from the ego runs.
 
-No announcements, so no kept/betrayed/bluffed/ghosted verdicts and no
-truthfulness signal. No sponsors on the Wall. Scripted strategies do not learn,
-where a real agent reads the hill and reasons. Read these as a floor on how the
-economy behaves, not as a forecast.
+## What the runs still do not model
+
+No announcements, so no kept/betrayed/bluffed/ghosted and no truthfulness
+signal. No sponsors deliberately buying the Wall — the Wall is a by-product of
+play here, where in reality someone may spend *to be on it*. Scripted strategies
+do not learn. Arrivals are a flat rate, where a good journal night should spike
+them — which is exactly the loop the sharing work is meant to close.
+
+Reports: `sim-ego-30-nights.md`, `sim-ego-90-nights.md`, and the patient pair
+for comparison.
+
+## A bug the exercise surfaced
+
+`Constants` mapped the literal types of `DEFAULT_CONSTANTS`, so `Partial<Constants>`
+accepted only each field's default value. **No parameter sweep was possible at
+all** — the one thing an overridable constants object exists for. Widened to
+`number`.
