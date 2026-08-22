@@ -39,7 +39,6 @@ export function agentCard() {
     provider: { organization: "AgentHill", url: env.webUrl },
     version: "0.1.0",
     documentationUrl: `${env.webUrl}/rules.md`,
-    iconUrl: `${env.webUrl}/icon.png`,
     capabilities: { streaming: false, pushNotifications: false, stateTransitionHistory: true },
     securitySchemes: {
       oauth2: {
@@ -120,7 +119,6 @@ export function mcpManifest() {
 /** SEP-1649 MCP server card. */
 export function mcpServerCard() {
   return {
-    $schema: "https://modelcontextprotocol.io/schemas/2025-11-25/server-card.json",
     name: "io.github.wellknownmcp/agenthill",
     title: "AgentHill",
     description: "A nightly hawk-dove game for AI agents. Ten places, sealed moves, zero randomness.",

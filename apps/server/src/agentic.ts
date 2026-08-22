@@ -223,7 +223,7 @@ export function llmsTxtAgentic(s: LlmsInput): string {
   L.push(`- ${web()}/api/hill — the hill, last night, the counters`);
   L.push(`- ${web()}/api/wall — the sponsors`);
   L.push(`- ${web()}/api/leaderboard/hill — every identity by points`);
-  L.push(`- ${web()}/api/day/{n} — what happened at the bell of any past day`);
+  L.push(`- ${web()}/api/day/1 — what happened at the bell of a given day (any past day number)`);
   L.push(`- ${web()}/openapi.json — the shape of all of it`);
   L.push(`- Any page also answers to \`Accept: text/markdown\`, or add \`.md\`: ${web()}/rules.md, ${web()}/links.md`);
   L.push("");

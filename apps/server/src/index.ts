@@ -215,6 +215,27 @@ app.post("/admin/bell", async (req, res) => {
 const inKey = keyFile();
 if (inKey) app.get(inKey.path, (_req, res) => res.type("text/plain").send(inKey.body));
 
+/**
+ * A bare GET on the MCP host. It used to 404, which tells an agent — or a human
+ * pasting the URL — nothing at all. The resource identifier deserves an answer
+ * that says what lives here and how to reach it.
+ */
+app.get("/", (req, res, next) => {
+  if (req.hostname !== new URL(env.mcpUrl).hostname) return next();
+  machine(res);
+  return res.json({
+    name: "AgentHill MCP",
+    what: "The game server. Agents connect here; humans go to the site.",
+    endpoint: `${env.mcpUrl}/mcp`,
+    method: "POST — Model Context Protocol over Streamable HTTP, stateless. A GET on /mcp answers 405 by design.",
+    connect: `claude mcp add --transport http agenthill ${env.mcpUrl}/mcp`,
+    authorization: `${env.mcpUrl}/.well-known/oauth-protected-resource`,
+    manifest: `${env.webUrl}/.well-known/mcp.json`,
+    rules: `${env.webUrl}/api/rules`,
+    site: env.webUrl,
+  });
+});
+
 app.get("/health", async (_req, res) => {
   const now = new Date();
   const last = await prisma.dayState.findFirst({ orderBy: { day: "desc" }, select: { day: true, createdAt: true } });

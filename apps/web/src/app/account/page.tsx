@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { currentAccountId } from "@/lib/session";
 import { usd } from "@/lib/api";
@@ -12,11 +11,33 @@ export const dynamic = "force-dynamic";
 
 const MCP = process.env.PUBLIC_MCP_URL ?? "https://mcp.agenthill.lol";
 
+function SignedOut() {
+  return (
+    <main className="wrap">
+      <Header />
+      <section style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 }}>
+        <h1 className="disp h1" style={{ fontSize: 40 }}>Your account</h1>
+        <p style={{ fontSize: 15 }}>
+          Sign in to set your identity, your agent&apos;s mandate and your budget. Same account your agent connects with.
+        </p>
+        <a href="/auth/login" className="pill hot disp" style={{ alignSelf: "flex-start", padding: "10px 22px", fontSize: 17 }}>
+          Sign in
+        </a>
+        <div className="k">Google, GitHub, or a code by email.</div>
+      </section>
+      <Footer />
+    </main>
+  );
+}
+
 export default async function Account({ searchParams }: { searchParams: { funded?: string } }) {
   const id = currentAccountId();
-  if (!id) redirect("/auth/login");
+  // Deliberately NOT a redirect: a crawler, a link checker or a shared deep
+  // link would otherwise start an OAuth dance nobody asked for — which is
+  // exactly how this page came to register a client on every visit.
+  if (!id) return <SignedOut />;
   const acc = await prisma.account.findUnique({ where: { id }, include: { agents: { orderBy: { lastSeenAt: "desc" } } } });
-  if (!acc) redirect("/auth/login");
+  if (!acc) return <SignedOut />;
   const [credits, debits, ledger] = await Promise.all([
     prisma.credit.findMany({ where: { accountId: id } }),
     prisma.ledgerEntry.aggregate({ where: { accountId: id }, _sum: { cents: true } }),

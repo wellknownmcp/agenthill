@@ -13,7 +13,27 @@ const RESOURCE = process.env.OAUTH_AUDIENCE ?? "https://mcp.agenthill.lol";
 const WEB = process.env.PUBLIC_WEB_URL ?? "https://agenthill.lol";
 export const REDIRECT_URI = `${WEB}/auth/callback`;
 
+export class SignInUnavailable extends Error {
+  constructor(public reason: string) {
+    super(reason);
+  }
+}
+
+/** Registering is done once, ever. Memoised in process so a burst of requests
+ *  cannot turn into a burst of registrations against the authorization server. */
+let memo: Promise<{ clientId: string; clientSecret: string }> | null = null;
+
 export async function clientCredentials(): Promise<{ clientId: string; clientSecret: string }> {
+  if (!memo) {
+    memo = register().catch((e) => {
+      memo = null; // a failure must not be cached for ever
+      throw e;
+    });
+  }
+  return memo;
+}
+
+async function register(): Promise<{ clientId: string; clientSecret: string }> {
   const envId = process.env.OAUTH_CLIENT_ID;
   const envSecret = process.env.OAUTH_CLIENT_SECRET;
   if (envId && envSecret) return { clientId: envId, clientSecret: envSecret };
@@ -33,10 +53,15 @@ export async function clientCredentials(): Promise<{ clientId: string; clientSec
       scope: "hill:read hill:play",
     }),
   });
-  if (!r.ok) throw new Error(`DCR failed: ${r.status} ${await r.text()}`);
+  if (!r.ok) throw new SignInUnavailable(`the authorization server refused to register this app (${r.status})`);
   const j = (await r.json()) as { client_id: string; client_secret?: string };
-  if (!j.client_secret) throw new Error("DCR returned no client_secret");
-  await prisma.oauthClientRegistration.create({ data: { id: "web", clientId: j.client_id, clientSecret: j.client_secret } });
+  if (!j.client_secret) throw new SignInUnavailable("the authorization server returned no client secret");
+  // upsert, not create: two requests racing must not lose the registration.
+  await prisma.oauthClientRegistration.upsert({
+    where: { id: "web" },
+    create: { id: "web", clientId: j.client_id, clientSecret: j.client_secret },
+    update: { clientId: j.client_id, clientSecret: j.client_secret },
+  });
   return { clientId: j.client_id, clientSecret: j.client_secret };
 }
 
