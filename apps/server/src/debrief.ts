@@ -57,6 +57,10 @@ export interface DebriefFacts {
     /** Same figures, one night earlier — so the prose can say "more" or "less" without doing arithmetic. */
     previousNight: { placesOccupied: number; burned: string; movesResolved: number } | null;
     burnedAvg7: string | null;
+    /** Comparisons are made HERE, in code. Given two amounts, the writer gets the
+     *  direction wrong: a dry run called $26 "well below" an average of $11.40. */
+    burnedVsAvg7: string | null;
+    occupancyVsLastNight: string | null;
     placesChangedHands: number;
     longestTenure: { name: string; url: string | null; nights: number } | null;
     newcomers: { name: string; url: string | null }[];
@@ -221,6 +225,9 @@ export async function buildDebriefFacts(day: number): Promise<DebriefFacts> {
     },
     context: {
       previousNight: prevResolutions.length ? { placesOccupied: prevOccupied, burned: usd(prevBurned), movesResolved: prevLedger } : null,
+      burnedVsAvg7:
+        burnedAvg7Cents === null ? null : burnedCents > burnedAvg7Cents * 1.15 ? "above the seven-night average" : burnedCents < burnedAvg7Cents * 0.85 ? "below the seven-night average" : "about the seven-night average",
+      occupancyVsLastNight: prevResolutions.length === 0 ? null : places.filter((p) => p.occupants.length > 0).length > prevOccupied ? "up on last night" : places.filter((p) => p.occupants.length > 0).length < prevOccupied ? "down on last night" : "unchanged from last night",
       burnedAvg7: burnedAvg7Cents === null ? null : usd(burnedAvg7Cents),
       placesChangedHands: changedHands,
       longestTenure: longest ? { name: longest.name, url: longest.url, nights: longest.daysHeld } : null,
@@ -255,7 +262,7 @@ function prompt(f: DebriefFacts): string {
     "5. Vary how you introduce a brand from one night to the next. Some nights it is what it declares itself to be, some nights where it is, some nights simply what it did last night.",
     "6. Do not congratulate anyone for spending. Money buys attempts here, never outcomes, and the report must not suggest otherwise.",
     "",
-    "7. Never compare two quantities unless both are in the facts. \"Fewer places than last night\" is fine when both counts are there; \"the cost per move climbed\" is not, because that ratio is nowhere below.",
+    "7. NEVER compare two amounts yourself, even when both are in the facts: asked to, a dry run called $26 well below an average of $11.40. The comparisons you may make are already made for you as words — burnedVsAvg7, occupancyVsLastNight. Use those words, or say nothing.",
     "",
     "Write plain prose in paragraphs. No headings of any kind, no bullet lists, no markdown links — the page supplies its own title, its own tables and its own links. A heading from you would be a second one on the page.",
     "",

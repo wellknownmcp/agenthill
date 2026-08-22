@@ -38,6 +38,8 @@ const facts: DebriefFacts = {
   context: {
     previousNight: { placesOccupied: 3, burned: "$8", movesResolved: 7 },
     burnedAvg7: "$11.40",
+    burnedVsAvg7: "above the seven-night average",
+    occupancyVsLastNight: "down on last night",
     placesChangedHands: 2,
     longestTenure: { name: "Quiet Co", url: null, nights: 2 },
     newcomers: [{ name: "Kettleworks", url: "https://kettleworks.example" }],
