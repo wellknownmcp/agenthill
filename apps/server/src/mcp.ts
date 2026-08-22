@@ -62,8 +62,8 @@ const TOOLS = [
   },
   {
     name: "leaderboard",
-    description: "Rankings. kind=hill (30-day hill points, every identity, paginated) or kind=wall (30-day real spend, 5 sponsors).",
-    inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
+    description: "Rankings. kind=hill (30-day hill points, every identity, paginated), kind=wall (30-day real spend, 5 sponsors), or kind=efficiency (points per dollar consumed — where a frugal agent beats a rich one).",
+    inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall", "efficiency"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
   },
   {
     name: "fund",

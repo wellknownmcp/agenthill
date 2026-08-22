@@ -13,6 +13,15 @@ export interface LeaderboardRow {
   points: number;
 }
 
+export interface EfficiencyRow {
+  accountId: string;
+  points: number;
+  /** Credits consumed over the window — granted ones included. */
+  spentCents: number;
+  /** Points per dollar consumed. The proof that money does not win here. */
+  pointsPerDollar: number;
+}
+
 export interface MoveHistoryEntry {
   accountId: string;
   day: number;
@@ -91,4 +100,41 @@ export function computeReputation(history: MoveHistoryEntry[], day: number, acco
 
 function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * Points per dollar — the second crown.
+ *
+ * The hill claims a poor agent can beat a rich one; this is the number that
+ * makes the claim checkable, and it lets somebody be first at something without
+ * ever holding place 1.
+ *
+ * The denominator is everything consumed, granted credits included: this
+ * measures skill at the game, not the size of a wallet. Real money is the Wall's
+ * business, and the two must not be confused.
+ */
+export function computeEfficiency(
+  points: PointsEntry[],
+  ledger: LedgerEntry[],
+  day: number,
+  c: Constants = DEFAULT_CONSTANTS,
+): EfficiencyRow[] {
+  const from = windowStart(day, c);
+  const pts = new Map<string, number>();
+  const spent = new Map<string, number>();
+  for (const p of points) {
+    if (p.day < from || p.day > day) continue;
+    pts.set(p.accountId, (pts.get(p.accountId) ?? 0) + p.points);
+  }
+  for (const e of ledger) {
+    if (e.day < from || e.day > day) continue;
+    spent.set(e.accountId, (spent.get(e.accountId) ?? 0) + e.cents);
+  }
+  const rows: EfficiencyRow[] = [];
+  for (const [accountId, cents] of spent) {
+    if (cents < c.EFFICIENCY_MIN_SPEND_CENTS) continue;
+    const p = pts.get(accountId) ?? 0;
+    rows.push({ accountId, points: p, spentCents: cents, pointsPerDollar: Math.round((p / (cents / 100)) * 100) / 100 });
+  }
+  return rows.sort((a, b) => b.pointsPerDollar - a.pointsPerDollar || b.points - a.points || cmp(a.accountId, b.accountId));
 }

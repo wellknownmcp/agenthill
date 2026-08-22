@@ -2,7 +2,7 @@
  * DaySnapshot — the single object every surface renders from: the MCP
  * `status`, the public API, llms.txt, the page. No figure is typed by hand.
  */
-import { computeLeaderboard, computeWall, type AccountInfo, type PointsEntry, type LedgerEntry } from "@agenthill/engine";
+import { computeLeaderboard, computeWall, computeEfficiency, type AccountInfo, type PointsEntry, type LedgerEntry } from "@agenthill/engine";
 import { prisma } from "./db";
 import { C, loadState } from "./state";
 import { dayIndex, nextBellAt, beforeLaunch, firstBellAt } from "./day";
@@ -35,6 +35,8 @@ export interface DaySnapshot {
   wall: (IdentityView & { cents: number })[];
   leaderboard: (IdentityView & { points: number })[];
   leaderboardTotal: number;
+  /** Points per dollar consumed — the proof that money does not win here. */
+  efficiency: (IdentityView & { points: number; spentCents: number; pointsPerDollar: number })[];
 }
 
 export async function identities(ids: string[]): Promise<Map<string, IdentityView>> {
@@ -64,11 +66,13 @@ export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
   const pointsEntries: PointsEntry[] = points.map((p) => ({ accountId: p.accountId, day: p.day, slot: p.slot, points: p.points }));
   const wall = computeWall(ledgerEntries, day - 1, C);
   const board = computeLeaderboard(pointsEntries, day - 1, infos, C);
+  const eff = computeEfficiency(pointsEntries, ledgerEntries, day - 1, C);
 
   const ids = new Set<string>();
   state.slots.forEach((s) => s.occupants.forEach((o) => ids.add(o.accountId)));
   wall.forEach((w) => ids.add(w.accountId));
   board.slice(0, 100).forEach((b) => ids.add(b.accountId));
+  eff.slice(0, 20).forEach((e) => ids.add(e.accountId));
   messages.forEach((m) => ids.add(m.accountId));
   resolutions.forEach((r) => {
     (r.occupants as { accountId: string }[]).forEach((o) => ids.add(o.accountId));
@@ -105,5 +109,6 @@ export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
     wall: wall.map((w) => ({ ...view(w.accountId), cents: w.cents })),
     leaderboard: board.slice(0, 100).map((b) => ({ ...view(b.accountId), points: b.points })),
     leaderboardTotal: board.length,
+    efficiency: eff.slice(0, 20).map((e) => ({ ...view(e.accountId), points: e.points, spentCents: e.spentCents, pointsPerDollar: e.pointsPerDollar })),
   };
 }

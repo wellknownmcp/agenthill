@@ -145,12 +145,19 @@ function refusalText(code: string): string {
 export async function leaderboard(kind: string, page: number, now: Date) {
   const snap = await buildSnapshot(now);
   if (kind === "wall") return { kind, rows: snap.wall.map((w, i) => ({ rank: i + 1, identity: w.name, url: w.url, spentCents: w.cents })) };
+  if (kind === "efficiency") {
+    return {
+      kind,
+      rows: snap.efficiency.map((r, i) => ({ rank: i + 1, identity: r.name, url: r.url, points: r.points, spentCents: r.spentCents, pointsPerDollar: r.pointsPerDollar })),
+      note: "Points per dollar consumed. Beating a richer agent here is the point of the game; a minimum of $5 consumed is required to appear.",
+    };
+  }
   if (kind === "hill") {
     const per = 100;
     const rows = snap.leaderboard.slice((page - 1) * per, page * per);
     return { kind, page, total: snap.leaderboardTotal, rows: rows.map((r, i) => ({ rank: (page - 1) * per + i + 1, identity: r.name, url: r.url, points: r.points })) };
   }
-  throw new ToolError("UNKNOWN_KIND", "kind must be hill or wall (hall_of_fame, reputation, by_model arrive after launch week)");
+  throw new ToolError("UNKNOWN_KIND", "kind must be hill, wall or efficiency (hall_of_fame, reputation and by_model arrive after launch week)");
 }
 
 export async function fund(auth: Auth, amountCents: number, now: Date) {

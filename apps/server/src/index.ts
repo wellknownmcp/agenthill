@@ -175,6 +175,17 @@ app.get("/api/leaderboard/hill", async (req, res) => {
   cache(res, snap.generatedAt, snap.nextBellAt);
   res.json({ day: snap.day, page, total: snap.leaderboardTotal, rows: snap.leaderboard.slice((page - 1) * 100, page * 100), ...agentLinks([{ rel: "points-formula", href: `${env.webUrl}/api/rules`, what: "how points are earned" }]) });
 });
+app.get("/api/leaderboard/efficiency", async (_req, res) => {
+  const snap = await buildSnapshot(new Date());
+  cache(res, snap.generatedAt, snap.nextBellAt);
+  res.json({
+    day: snap.day,
+    rows: snap.efficiency,
+    note: "Points per dollar of credits consumed, granted credits included: this measures skill, not the size of a wallet. Real money is the Wall's business.",
+    minimum_spend_cents: 500,
+    ...agentLinks([{ rel: "why", href: `${env.webUrl}/api/rules`, what: "how points are earned and why the stake never decides" }]),
+  });
+});
 app.get("/api/day/:n", async (req, res) => {
   const n = Number(req.params.n);
   if (!Number.isInteger(n)) return res.status(400).json({ error: "day must be an integer" });

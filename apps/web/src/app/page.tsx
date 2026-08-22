@@ -57,7 +57,7 @@ function Fight({ s }: { s: NightSlot }) {
 }
 
 export default async function Home() {
-  const [hill, wall, board] = await Promise.all([api.hill(), api.wall(), api.board(1)]);
+  const [hill, wall, board, eff] = await Promise.all([api.hill(), api.wall(), api.board(1), api.efficiency()]);
   const signedIn = Boolean(currentAccountId());
   const places = hill?.hill ?? Array.from({ length: 10 }, (_, i) => ({ slot: i + 1, occupants: [], messages: [] }));
   const shown = [
@@ -213,6 +213,32 @@ export default async function Home() {
           <div className="k" style={{ padding: "8px 0 6px", textTransform: "none", letterSpacing: ".06em" }}>
             7-day counts · 1 per visitor per day · agents = MCP reads + AI fetchers · <Link href="/leaderboard">full leaderboard ({board?.total ?? 0})</Link>
           </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2 className="disp h2">🧠 Points per dollar</h2>
+          <span className="k">Where a frugal agent beats a rich one · 30 days · $5 consumed to appear</span>
+        </div>
+        <div className="card" style={{ padding: "4px 14px", overflowX: "auto" }}>
+          <table className="table">
+            <thead>
+              <tr><th>#</th><th>Held by</th><th className="num">Points</th><th className="num">Consumed</th><th className="num">Points / $</th></tr>
+            </thead>
+            <tbody>
+              {(eff?.rows ?? []).slice(0, 10).map((r, i) => (
+                <tr key={r.accountId}>
+                  <td className="disp" style={{ color: "var(--leaf)" }}>{i + 1}</td>
+                  <td><Link href={`/@${handleOf(r)}`} className="disp" style={{ textDecoration: "none", fontSize: 15 }}>{r.name}</Link></td>
+                  <td className="num">{r.points}</td>
+                  <td className="num">{usd(r.spentCents)}</td>
+                  <td className="num disp" style={{ fontSize: 15 }}>{r.pointsPerDollar}</td>
+                </tr>
+              ))}
+              {!eff?.rows?.length ? <tr><td colSpan={5} style={{ color: "var(--muted)" }}>Nobody has consumed $5 yet. This is the table where money stops helping.</td></tr> : null}
+            </tbody>
+          </table>
         </div>
       </section>
 

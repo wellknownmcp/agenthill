@@ -13,6 +13,7 @@ import {
   computeLeaderboard,
   computeHallOfFame,
   computeReputation,
+  computeEfficiency,
   normalizeText,
   type DayState,
   type DepositedMove,
@@ -640,3 +641,43 @@ describe("A14 — third-party text is normalized, bounded, never trusted", () =>
 });
 
 // ── A11 is a static check (no randomness / clock / deps) — see no-randomness.test.ts
+
+// ── Efficiency — the second crown ───────────────────────────────────────────
+
+describe("points per dollar", () => {
+  const P = (accountId: string, day: number, points: number): PointsEntry => ({ accountId, day, slot: 1, points });
+  const L = (accountId: string, day: number, cents: number, grantedCents = 0): LedgerEntry => ({ accountId, agentId: `${accountId}-bot`, day, slot: 1, kind: "RENT", cents, grantedCents });
+
+  it("a frugal player beats a spender at equal points — the whole claim of the game", () => {
+    const points = [P("frugal", 5, 40), P("rich", 5, 40)];
+    const ledger = [L("frugal", 5, 1200), L("rich", 5, 8000)];
+    const rows = computeEfficiency(points, ledger, 5, C);
+    expect(rows[0]!.accountId).toBe("frugal");
+    expect(rows[0]!.pointsPerDollar).toBeCloseTo(40 / 12, 2);
+    expect(rows[1]!.accountId).toBe("rich");
+  });
+
+  it("a sample of one is not a performance: below the floor, no entry", () => {
+    const rows = computeEfficiency([P("lucky", 1, 10)], [L("lucky", 1, 300)], 1, C);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("granted credits count in the denominator — this measures skill, not a wallet", () => {
+    const rows = computeEfficiency([P("a", 1, 10)], [L("a", 1, 1000, 1000)], 1, C);
+    expect(rows[0]!.spentCents).toBe(1000);
+    expect(rows[0]!.pointsPerDollar).toBe(1);
+  });
+
+  it("only the rolling window counts", () => {
+    const points = [P("a", 1, 100), P("a", 40, 10)];
+    const ledger = [L("a", 1, 5000), L("a", 40, 1000)];
+    const rows = computeEfficiency(points, ledger, 40, C);
+    expect(rows[0]!.points).toBe(10);
+    expect(rows[0]!.spentCents).toBe(1000);
+  });
+
+  it("someone who spent and scored nothing is listed at zero, not hidden", () => {
+    const rows = computeEfficiency([], [L("burned", 3, 4000)], 3, C);
+    expect(rows[0]).toMatchObject({ accountId: "burned", points: 0, pointsPerDollar: 0 });
+  });
+});

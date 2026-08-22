@@ -50,6 +50,11 @@ export interface WallResponse {
   day: number;
   wall: (Identity & { cents: number })[];
 }
+export interface EfficiencyResponse {
+  day: number;
+  rows: (Identity & { points: number; spentCents: number; pointsPerDollar: number })[];
+  note: string;
+}
 export interface BoardResponse {
   day: number;
   page: number;
@@ -71,6 +76,7 @@ export const api = {
   hill: () => get<HillResponse>("/api/hill"),
   wall: () => get<WallResponse>("/api/wall"),
   board: (page = 1) => get<BoardResponse>(`/api/leaderboard/hill?page=${page}`),
+  efficiency: () => get<EfficiencyResponse>("/api/leaderboard/efficiency"),
   counters: (ids: string[]) => get<Record<string, Counters>>(`/api/counters?ids=${encodeURIComponent(ids.join(","))}`, 30),
   day: (n: number) => get<{ day: number; slots: NightSlot[] }>(`/api/day/${n}`, 3600),
 };

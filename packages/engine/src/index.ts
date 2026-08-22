@@ -17,6 +17,6 @@ export { rentCents, emptyState } from "./money";
 export { normalizeText } from "./text";
 export { validateMove } from "./validate";
 export { resolveDay } from "./resolve";
-export { computeWall, computeLeaderboard, computeHallOfFame, computeReputation } from "./rankings";
-export type { WallRow, LeaderboardRow, MoveHistoryEntry } from "./rankings";
+export { computeWall, computeLeaderboard, computeHallOfFame, computeReputation, computeEfficiency } from "./rankings";
+export type { WallRow, LeaderboardRow, EfficiencyRow, MoveHistoryEntry } from "./rankings";
 export type * from "./types";

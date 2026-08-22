@@ -30,6 +30,12 @@ export const DEFAULT_CONSTANTS = {
   DEFAULT_MAX_STAKE_CENTS: 1500,
   /** Granted (free) credits expire; purchased ones never do. */
   GRANT_EXPIRY_DAYS: 90,
+  /**
+   * Minimum credits consumed before an identity appears in the efficiency
+   * ranking. Without a floor, whoever spent $3 for 10 points tops a table meant
+   * to reward skill — a sample of one is not a performance.
+   */
+  EFFICIENCY_MIN_SPEND_CENTS: 500,
 } as const;
 
 export type Constants = { -readonly [K in keyof typeof DEFAULT_CONSTANTS]: (typeof DEFAULT_CONSTANTS)[K] };

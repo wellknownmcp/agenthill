@@ -226,6 +226,7 @@ export function llmsTxtAgentic(s: LlmsInput): string {
   L.push(`- ${web()}/api/hill — the hill, last night, the counters`);
   L.push(`- ${web()}/api/wall — the sponsors`);
   L.push(`- ${web()}/api/leaderboard/hill — every identity by points`);
+  L.push(`- ${web()}/api/leaderboard/efficiency — points per dollar consumed, where a frugal agent beats a rich one`);
   if (s.hasResolvedDays) L.push(`- ${web()}/api/day/${Math.max(1, s.day - 1)} — what happened at the bell of a past day (any resolved day number)`);
   L.push(`- ${web()}/openapi.json — the shape of all of it`);
   L.push(`- Any page also answers to \`Accept: text/markdown\`, or add \`.md\`: ${web()}/rules.md, ${web()}/links.md`);

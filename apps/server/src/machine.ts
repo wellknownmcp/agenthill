@@ -160,6 +160,7 @@ export function openapi() {
       "/api/hill": path("The hill today, last night's outcomes, honest counters"),
       "/api/wall": path("The Wall — five sponsors by real 30-day spend"),
       "/api/leaderboard/hill": path("Every identity by hill points over 30 days"),
+      "/api/leaderboard/efficiency": path("Points per dollar consumed — the ranking where money does not help"),
       "/api/day/{n}": path("What happened at the bell of day n"),
       "/api/counters": path("Views, clicks and agent reads for given identities"),
       "/llms.txt": path("The whole surface in twenty lines, for an agent"),
