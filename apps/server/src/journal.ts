@@ -37,18 +37,18 @@ export function debriefMd(day: number, facts: DebriefFacts, narrative: string): 
     // Whoever lost the place is named too, with their link. They paid to be here
     // yesterday; disappearing from the record without a mention is not neutral.
     const lost = p.evicted.length ? ` (evicted: ${p.evicted.map(named).join(", ")})` : "";
-    L.push(`| ${p.slot} | ${outcomeLine(p)}${lost} | ${p.outcome.toLowerCase()}${p.warCount > 1 ? ` (${p.warCount} wars)` : ""} | ${p.burnedCents ? usd(p.burnedCents) : "—"} |`);
+    L.push(`| ${p.slot} | ${outcomeLine(p)}${lost} | ${p.outcome.toLowerCase()}${p.warCount > 1 ? ` (${p.warCount} wars)` : ""} | ${p.burnedCents ? p.burned : "—"} |`);
   }
   L.push("");
 
   L.push("## The night in figures", "");
   L.push(`- ${t.placesOccupied} of 10 places held, ${t.placesVacant} vacant.`);
   L.push(`- ${t.movesResolved} moves resolved — ${t.peaceMoves} peace, ${t.warMoves} war — from ${t.identitiesPlaying} identities.`);
-  L.push(`- ${usd(t.spentCents)} consumed, of which ${usd(t.burnedCents)} burned on colliding wars and bought nothing.`);
+  L.push(`- ${t.spent} consumed, of which ${t.burned} burned on colliding wars and bought nothing.`);
   if (c.previousNight) {
-    L.push(`- Last night: ${c.previousNight.placesOccupied} places held, ${c.previousNight.movesResolved} moves, ${usd(c.previousNight.burnedCents)} burned.`);
+    L.push(`- Last night: ${c.previousNight.placesOccupied} places held, ${c.previousNight.movesResolved} moves, ${c.previousNight.burned} burned.`);
   }
-  if (c.burnedAvg7Cents !== null) L.push(`- Burned per night over the last 7: ${usd(c.burnedAvg7Cents)} on average.`);
+  if (c.burnedAvg7 !== null) L.push(`- Burned per night over the last 7: ${c.burnedAvg7} on average.`);
   L.push(`- ${c.placesChangedHands} ${c.placesChangedHands === 1 ? "place" : "places"} changed hands.`);
   if (c.longestTenure) L.push(`- Longest tenure standing: ${named(c.longestTenure)}, ${c.longestTenure.nights} nights.`);
   if (c.newcomers.length) L.push(`- New on the hill: ${c.newcomers.map(named).join(", ")}.`);
@@ -56,12 +56,9 @@ export function debriefMd(day: number, facts: DebriefFacts, narrative: string): 
   L.push("");
 
   const w = facts.word;
-  if (w.kept.length || w.betrayed.length || w.bluffed.length || w.ghosted.length) {
+  if (w.length) {
     L.push("## Who kept their word", "");
-    if (w.kept.length) L.push(`- Kept: ${w.kept.join(", ")}`);
-    if (w.betrayed.length) L.push(`- Betrayed (said peace, made war): ${w.betrayed.join(", ")}`);
-    if (w.bluffed.length) L.push(`- Bluffed (said war, did not): ${w.bluffed.join(", ")}`);
-    if (w.ghosted.length) L.push(`- Ghosted (said something, played nothing): ${w.ghosted.join(", ")}`);
+    for (const v of w) L.push(`- **${v.name}** — ${v.verdict}: ${v.whatItMeans}.`);
     L.push("", "An announcement orders nothing in the game. It only decides whether the others can read you.", "");
   }
 
