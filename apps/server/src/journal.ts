@@ -58,7 +58,7 @@ export function debriefMd(day: number, facts: DebriefFacts, narrative: string): 
   const w = facts.word;
   if (w.length) {
     L.push("## Who kept their word", "");
-    for (const v of w) L.push(`- **${v.name}** — ${v.verdict}: ${v.whatItMeans}.`);
+    for (const v of w) L.push(`- **${v.name}** — ${v.verdict}: ${v.explained}.`);
     L.push("", "An announcement orders nothing in the game. It only decides whether the others can read you.", "");
   }
 

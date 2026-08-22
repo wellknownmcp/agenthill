@@ -46,8 +46,8 @@ const facts: DebriefFacts = {
     departures: [{ name: "Corvid Labs", url: "https://corvid.example" }],
   },
   word: [
-    { name: "Quiet Co", verdict: "kept", whatItMeans: "announced a move and then played exactly that" },
-    { name: "Kettleworks", verdict: "betrayed", whatItMeans: "announced PEACE and then made WAR" },
+    { name: "Quiet Co", verdict: "kept", explained: "announced a move and then played exactly that" },
+    { name: "Kettleworks", verdict: "betrayed", explained: "announced PEACE and then made WAR" },
   ],
   who: [
     { name: "Kettleworks", url: "https://kettleworks.example", title: "t", description: "d", declaredType: "Organization", country: "GB", locality: "Sheffield", agentSurfaces: ["llms_txt"], pointsTotal30d: 10 },

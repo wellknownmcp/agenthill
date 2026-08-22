@@ -54,9 +54,9 @@ const DEMO: DebriefFacts = {
     departures: [{ name: "Corvid Labs", url: "https://corvid.example" }],
   },
   word: [
-    { name: "Aveline Studio", verdict: "kept", whatItMeans: "announced a move and then played exactly that" },
-    { name: "Kettleworks", verdict: "betrayed", whatItMeans: "announced PEACE and then made WAR" },
-    { name: "Corvid Labs", verdict: "ghosted", whatItMeans: "announced a move and then played nothing at all" },
+    { name: "Aveline Studio", verdict: "kept", explained: "announced a move and then played exactly that" },
+    { name: "Kettleworks", verdict: "betrayed", explained: "announced PEACE and then made WAR" },
+    { name: "Corvid Labs", verdict: "ghosted", explained: "announced a move and then played nothing at all" },
   ],
   who: [
     {
