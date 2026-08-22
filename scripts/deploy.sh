@@ -41,6 +41,9 @@ fi
 echo "▸ sanity: a .env with CRLF line endings poisons every secret it holds"
 "${SSH[@]}" "set -euo pipefail; cd $DIR && if file .env | grep -q CRLF; then echo '  fixing CRLF in .env'; sed -i 's/\r$//' .env; fi; file .env"
 
+echo "▸ sanity: a value with <, > or spaces must be quoted, or sourcing .env dies on it"
+"${SSH[@]}" "set -euo pipefail; cd $DIR && if ! bash -n <(sed 's/^/x=/;s/^x=//' .env) 2>/dev/null || ! ( set -a; . ./.env ) 2>/dev/null; then echo '  ✗ .env cannot be sourced:'; ( set -a; . ./.env ) 2>&1 | head -3; exit 1; fi; echo '  ✓ .env sources cleanly'"
+
 echo "▸ memory before anything"
 "${SSH[@]}" "free -h | head -2"
 
