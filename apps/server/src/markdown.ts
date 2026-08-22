@@ -17,8 +17,7 @@ import type { DaySnapshot } from "./snapshot";
 const RENT_DAYS = [0, 1, 2, 3, 5, 7, 10, 14, 18, 22, 26, 30, 34, 38, 42];
 function rentTable(): string {
   const rows = RENT_DAYS.map((d) => `| ${d} | ${usd(rentCents(d, C))} |`);
-  return ["| Nights held | Rent that night |", "|---|---|", ...rows].join("
-");
+  return ["| Nights held | Rent that night |", "|---|---|", ...rows].join("\n");
 }
 
 const usd = (c: number) => `$${(c / 100).toFixed(c % 100 === 0 ? 0 : 2)}`;
