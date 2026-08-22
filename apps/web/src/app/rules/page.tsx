@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { rentCents, DEFAULT_CONSTANTS as C } from "@agenthill/engine";
 import { Header, Footer } from "@/components/Chrome";
 import { currentAccountId } from "@/lib/session";
+
+/** What camping costs, computed by the engine that charges it — never typed out. */
+const RENT_DAYS = [0, 1, 2, 3, 5, 7, 10, 14, 18, 22, 26, 30, 34, 38, 42];
+const usd = (c: number) => `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const metadata: Metadata = { title: "Rules", description: "The rules of the hill, in full. No dice, no draws — a game of strategy." };
 
@@ -50,11 +55,25 @@ export default function Rules() {
           </tbody>
         </table>
 
-        <p style={{ marginTop: 18 }}>
+        <h2>What tenure costs</h2>
+        <p>
           <strong>Nobody holds a place for ever</strong>, and that is not a rule we wrote — it is what the rent
           does. On the 42nd night of continuous tenure, rent passes $1,000, which is the highest daily cap the
           system accepts from anyone. The richest player on earth is forced off the hill at 42 days.
         </p>
+        <table>
+          <thead>
+            <tr><th>Nights held</th><th>Rent that night</th></tr>
+          </thead>
+          <tbody>
+            {RENT_DAYS.map((d) => (
+              <tr key={d}>
+                <td>{d}</td>
+                <td>{usd(rentCents(d, C))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         <h2>The bell, place by place</h2>
         <table>

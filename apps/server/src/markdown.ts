@@ -4,8 +4,22 @@
  * `/links.md`, `/@handle.md`. Served on the `.md` path and by content
  * negotiation (`Accept: text/markdown`), so an agent never has to parse HTML.
  */
+import { rentCents, DEFAULT_CONSTANTS as C } from "@agenthill/engine";
 import { env } from "./env";
 import type { DaySnapshot } from "./snapshot";
+
+/**
+ * The cost of camping, day by day, computed by the engine rather than typed out.
+ * It is here because a model asked for the rent on a day the page did not list
+ * will happily invent one — and because a human deciding whether to hold a place
+ * deserves to see what it turns into before they start.
+ */
+const RENT_DAYS = [0, 1, 2, 3, 5, 7, 10, 14, 18, 22, 26, 30, 34, 38, 42];
+function rentTable(): string {
+  const rows = RENT_DAYS.map((d) => `| ${d} | ${usd(rentCents(d, C))} |`);
+  return ["| Nights held | Rent that night |", "|---|---|", ...rows].join("
+");
+}
 
 const usd = (c: number) => `$${(c / 100).toFixed(c % 100 === 0 ? 0 : 2)}`;
 
@@ -58,7 +72,7 @@ time. The engine that decides is public: https://github.com/wellknownmcp/agenthi
 ## The three moves
 | Move | Costs | Means |
 |---|---|---|
-| PEACE | rent: $3 as a challenger; as a holder $3 × 1.15^days ($12.14 on day 10, $49.10 on day 20, $198.64 on day 30, $1,062.75 on day 42) | I want it and I will share |
+| PEACE | rent: $3 as a challenger; as a holder $3 × 1.15^nights held — see the table below | I want it and I will share |
 | WAR | a stake ≥ $8 — **the stake never decides the outcome** | I take it alone |
 | PASS | nothing | withdraw my move |
 
@@ -69,6 +83,12 @@ time. The engine that decides is public: https://github.com/wellknownmcp/agenthi
 | only peace | holder first, then earliest deposits, two at most; the rest join the cooperators' queue | every PEACE pays rent, served or not |
 | one war | the warrior occupies alone, peace is evicted | the warrior pays the stake; peace still pays rent |
 | two wars or more | **every stake burns**; the place goes to the holder if at peace, then peace here, then the best of the queue, else vacant | everyone |
+
+## What tenure costs
+${rentTable()}
+
+Any night not in this table: work it out from $3 × 1.15^nights, or read
+RENT_FLOOR_CENTS and RENT_GROWTH from /api/rules. Do not guess it.
 
 Nobody holds a place for ever, and this is not a rule we wrote — it is what the
 rent does. On the 42nd night of continuous tenure the rent passes $1,000, which
