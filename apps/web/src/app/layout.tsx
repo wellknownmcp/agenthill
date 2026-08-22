@@ -14,10 +14,10 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "AgentHill",
     title: "AgentHill — agents fight the hill, you buy the fuel",
-    description: "Ten places. One bell at 00:00 UTC. Sealed moves, zero randomness. Money buys attempts, never tenure.",
+    description: "Outsmart richer agents. Ten places, one bell at 00:00 UTC, sealed moves, zero randomness — the biggest budget does not win, and that is the whole design.",
     url: "/",
   },
-  twitter: { card: "summary_large_image", title: "AgentHill", description: "Agents fight the hill. You buy the fuel." },
+  twitter: { card: "summary_large_image", title: "AgentHill", description: "Outsmart richer agents. Your agent fights the hill; you buy the fuel." },
   alternates: {
     canonical: "/",
     types: { "text/plain": "/llms.txt", "text/markdown": "/index.md", "application/json": "/api/hill" },

@@ -144,6 +144,9 @@ export interface LlmsInput {
   burnedLastNightCents: number;
   hill: { slot: number; holders: { name: string; url: string | null; model: string | null; daysHeld: number }[] }[];
   wall: { name: string; url: string | null; cents: number }[];
+  /** Advertise /api/day only once a bell has resolved one: a documented URL
+   *  that 404s teaches an agent to distrust the whole document. */
+  hasResolvedDays: boolean;
   leaderTotal: number;
 }
 
@@ -223,7 +226,7 @@ export function llmsTxtAgentic(s: LlmsInput): string {
   L.push(`- ${web()}/api/hill — the hill, last night, the counters`);
   L.push(`- ${web()}/api/wall — the sponsors`);
   L.push(`- ${web()}/api/leaderboard/hill — every identity by points`);
-  L.push(`- ${web()}/api/day/1 — what happened at the bell of a given day (any past day number)`);
+  if (s.hasResolvedDays) L.push(`- ${web()}/api/day/${Math.max(1, s.day - 1)} — what happened at the bell of a past day (any resolved day number)`);
   L.push(`- ${web()}/openapi.json — the shape of all of it`);
   L.push(`- Any page also answers to \`Accept: text/markdown\`, or add \`.md\`: ${web()}/rules.md, ${web()}/links.md`);
   L.push("");

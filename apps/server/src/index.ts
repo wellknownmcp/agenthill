@@ -6,7 +6,7 @@ import { buildSnapshot } from "./snapshot";
 import { ringDueBells } from "./bell";
 import { dayIndex, beforeLaunch, firstBellAt } from "./day";
 import { webhook } from "./stripe";
-import { llmsTxt, agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
+import { agentCard, mcpManifest, mcpServerCard, apiCatalog, agentSkills, securityTxt, openapi } from "./machine";
 import { indexMd, rulesMd, linksMd, wantsMarkdown } from "./markdown";
 import { links as agentLinks, rulesData, llmsTxtAgentic } from "./agentic";
 import { keyFile, ping, changedUrls } from "./indexnow";
@@ -82,6 +82,21 @@ app.get(["/", "/rules", "/links"], async (req, res, next) => {
 });
 
 // ── Public read API — same DaySnapshot as the page, CORS open, cached until the bell
+/** The one shape both llms files are written from — so they cannot drift apart. */
+function llmsInput(snap: Awaited<ReturnType<typeof buildSnapshot>>) {
+  return {
+    day: snap.day,
+    beforeLaunch: snap.beforeLaunch,
+    opensAt: snap.opensAt,
+    nextBellAt: snap.nextBellAt,
+    burnedLastNightCents: snap.burnedLastNightCents,
+    hasResolvedDays: Boolean(snap.lastNight?.length),
+    hill: snap.hill.map((p) => ({ slot: p.slot, holders: p.occupants.map((o) => ({ name: o.name, url: o.url, model: o.model, daysHeld: o.daysHeld })) })),
+    wall: snap.wall.map((w) => ({ name: w.name, url: w.url, cents: w.cents })),
+    leaderTotal: snap.leaderboardTotal,
+  };
+}
+
 function cache(res: express.Response, snapAt: string, bellAt: string) {
   const ttl = Math.max(30, Math.min(3600, Math.floor((new Date(bellAt).getTime() - Date.now()) / 1000)));
   res.setHeader("Cache-Control", `public, max-age=60, s-maxage=${ttl}`);
@@ -172,22 +187,13 @@ app.get("/api/day/:n", async (req, res) => {
 app.get("/llms-full.txt", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
   cache(res, snap.generatedAt, snap.nextBellAt);
-  res.type("text/plain; charset=utf-8").send([llmsTxt(snap), "", "---", "", rulesMd(), "", "---", "", linksMd()].join("\n"));
+  res.type("text/plain; charset=utf-8").send([llmsTxtAgentic(llmsInput(snap)), "", "---", "", rulesMd(), "", "---", "", linksMd()].join("\n"));
 });
 app.get("/llms.txt", async (_req, res) => {
   const snap = await buildSnapshot(new Date());
   cache(res, snap.generatedAt, snap.nextBellAt);
   res.type("text/plain; charset=utf-8").send(
-    llmsTxtAgentic({
-      day: snap.day,
-      beforeLaunch: snap.beforeLaunch,
-      opensAt: snap.opensAt,
-      nextBellAt: snap.nextBellAt,
-      burnedLastNightCents: snap.burnedLastNightCents,
-      hill: snap.hill.map((p) => ({ slot: p.slot, holders: p.occupants.map((o) => ({ name: o.name, url: o.url, model: o.model, daysHeld: o.daysHeld })) })),
-      wall: snap.wall.map((w) => ({ name: w.name, url: w.url, cents: w.cents })),
-      leaderTotal: snap.leaderboardTotal,
-    }),
+    llmsTxtAgentic(llmsInput(snap)),
   );
 });
 

@@ -6,27 +6,8 @@ import { env } from "./env";
 
 const DEFAULT_RENT = DEFAULT_CONSTANTS.RENT_FLOOR_CENTS;
 const DEFAULT_WAR = DEFAULT_CONSTANTS.WAR_MIN_STAKE_CENTS;
-import type { DaySnapshot } from "./snapshot";
 
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
-
-export function llmsTxt(s: DaySnapshot): string {
-  const lines: string[] = [];
-  lines.push("# AgentHill", "", "> Agents fight the hill. You buy the fuel. Ten places, one bell at 00:00 UTC, zero randomness. Holding a place earns a dofollow link and honest counters. Money buys tries, not tenure.", "");
-  lines.push(s.beforeLaunch ? `The hill opens on ${s.opensAt.slice(0, 10)} — every place is free. First bell ${s.nextBellAt.slice(0, 10)} at 00:00 UTC.` : `Day ${s.day}. Next bell: ${s.nextBellAt}. Burned last night: ${usd(s.burnedLastNightCents)}.`, "");
-  lines.push("## The hill today", "");
-  for (const p of s.hill) {
-    const who = p.occupants.map((o) => `${o.name}${o.url ? ` (${o.url})` : ""}${o.model ? ` · ${o.model}` : ""} · ${o.daysHeld}d`).join(" · ") || "— free tonight, $3 —";
-    lines.push(`${p.slot}. ${who}`);
-  }
-  lines.push("", "## The Wall (30-day spend, sponsored)", "");
-  s.wall.forEach((w, i) => lines.push(`${i + 1}. ${w.name}${w.url ? ` (${w.url})` : ""} — ${usd(w.cents)}`));
-  if (!s.wall.length) lines.push("— nobody yet —");
-  lines.push("", "## Rules in one breath", "", "PEACE costs rent ($3, climbing 15 %/day for a holder). WAR costs a stake (≥ $8) that never decides anything: one war beats peace; two wars burn every stake and the place goes to the most reputable cooperator. Points = 11 − place per day. Only points rank the Leaderboard; only money ranks the Wall. Every link here is dofollow.", "");
-  lines.push("## Enter", "", `claude mcp add --transport http agenthill ${env.mcpUrl}/mcp`, `Then tell your agent: "hold me a place on the hill".`, "");
-  lines.push("## Machine surfaces", "", `- ${env.webUrl}/api/hill`, `- ${env.webUrl}/api/wall`, `- ${env.webUrl}/api/leaderboard/hill`, `- ${env.webUrl}/api/day/{n}`, `- ${env.mcpUrl}/.well-known/oauth-protected-resource`, `- ${env.webUrl}/.well-known/agent.json`, `- ${env.webUrl}/.well-known/mcp.json`, `- ${env.webUrl}/rules · ${env.webUrl}/links`, "");
-  return lines.join("\n");
-}
 
 export function agentCard() {
   return {
