@@ -159,7 +159,7 @@ app.get("/api/mcp-stats", async (req, res) => {
   const stats = await mcpStats(days);
   res.setHeader("Cache-Control", "public, max-age=300");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  return res.json({ ...stats, ...agentLinks([{ rel: "raw-export", href: `${env.mcpUrl}/admin/events.jsonl`, what: "the raw event stream, operator credentials required" }]) });
+  return res.json({ ...stats, ...agentLinks([{ rel: "raw-export", href: `${env.webUrl}/api/events.jsonl`, what: "the raw event stream, operator credentials required" }]) });
 });
 
 /**
@@ -168,7 +168,11 @@ app.get("/api/mcp-stats", async (req, res) => {
  * participation signal on a day whose moves are sealed. One JSON object per
  * line, so it pipes straight into an analytics tool without a parser.
  */
-app.get("/admin/events.jsonl", async (req, res) => {
+// Under /api and not /admin: nginx blocks /admin/ outright, which made this
+// unreachable for the very exporter it exists for. The gate is the secret in
+// the header, not the path — and no CORS header goes on this one, so a browser
+// on any origin cannot be talked into fetching it.
+app.get("/api/events.jsonl", async (req, res) => {
   if (!env.cronSecret || req.headers["x-cron-secret"] !== env.cronSecret) return res.status(401).json({ error: "unauthorized" });
   const sinceId = req.query["since"] ? BigInt(String(req.query["since"])) : undefined;
   const limit = Math.min(50_000, Math.max(1, Number(req.query["limit"] ?? 10_000) || 10_000));
