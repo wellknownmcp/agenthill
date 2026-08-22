@@ -15,6 +15,8 @@ export { DEFAULT_CONSTANTS } from "./constants";
 export type { Constants } from "./constants";
 export { rentCents, emptyState } from "./money";
 export { normalizeText } from "./text";
+export { verdictFor } from "./announce";
+export type { Verdict } from "./announce";
 export { validateMove } from "./validate";
 export { resolveDay } from "./resolve";
 export { computeWall, computeLeaderboard, computeHallOfFame, computeReputation, computeEfficiency } from "./rankings";

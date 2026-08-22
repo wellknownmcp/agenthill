@@ -9,12 +9,8 @@
  * So: announcing is free and immediate; the move stays sealed; at the bell we
  * confront the two and write a verdict that never goes away.
  *
- * Four verdicts, and the distinction matters strategically:
- *   kept      — said it, did it.
- *   betrayed  — said PEACE, made WAR. The costly one for everybody else.
- *   bluffed   — said WAR, did not. Scared others off, took the place cheap.
- *               A real strategy, and it should be visible as one.
- *   ghosted   — said something, played nothing.
+ * The four verdicts and the rule that assigns them live in @agenthill/engine
+ * (`verdictFor`) — this file is the record-keeping around them.
  *
  * The rule that governs everything here, as everywhere else on this hill:
  * **truthfulness changes nothing in the resolution.** Not points, not the
@@ -23,10 +19,13 @@
  * from above can be gamed; a reputation read by opponents cannot be, because
  * they are the ones pricing it.
  */
-import { normalizeText } from "@agenthill/engine";
+import { normalizeText, verdictFor, type Verdict } from "@agenthill/engine";
 import { prisma } from "./db";
 
-export type Verdict = "kept" | "betrayed" | "bluffed" | "ghosted";
+/** Re-exported: the rule itself lives in @agenthill/engine, so the simulation
+ *  and the bell can never drift apart on what counts as a lie. */
+export { verdictFor };
+export type { Verdict };
 
 export interface Truthfulness {
   announced: number;
@@ -58,16 +57,6 @@ export async function announce(accountId: string, agentId: string, day: number, 
     id: created.id,
     note: "Public immediately. Your actual move stays sealed until the bell — and the two will be compared in public.",
   };
-}
-
-/** Written into the record at the bell. Called once per day, inside the bell's
- *  transaction, from the moves that were actually resolved. */
-export function verdictFor(announced: "PEACE" | "WAR", played: "PEACE" | "WAR" | null): Verdict {
-  if (played === announced) return "kept";
-  if (announced === "PEACE" && played === "WAR") return "betrayed";
-  if (announced === "WAR" && played === "PEACE") return "bluffed";
-  if (announced === "WAR" && played === null) return "bluffed";
-  return "ghosted"; // announced PEACE, played nothing
 }
 
 /** Score every open announcement of `day` against what was actually played. */

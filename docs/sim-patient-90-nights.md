@@ -1,25 +1,38 @@
-# Simulation — 90 days, seed 7, rent growth 1.15, refuel model: patient
+# Simulation — 90 days, seed 7, rent growth 1.15, refuel model: patient, channel: talk
 
-40 scripted agents, 90 days, equal budgets. Strategies: dove ×10, hawk ×8, tit_for_tat ×8, scout ×8, opportunist ×6.
+44 scripted agents, 90 days, equal budgets. Strategies: dove ×10, hawk ×8, tit_for_tat ×8, scout ×8, opportunist ×6, bluffer ×4.
 
 ## By strategy
 
 | Strategy | Agents | Points | Spent | Burned | Agent-days on the hill | Points per $ |
 |---|---|---|---|---|---|---|
-| dove | 10 | 915.5 | $1981.96 | $0.00 | 237 | 0.46 |
-| scout | 8 | 603.5 | $1588.85 | $0.00 | 146 | 0.38 |
-| tit_for_tat | 8 | 460.0 | $1590.37 | $16.00 | 104 | 0.29 |
-| hawk | 8 | 77.0 | $1600.00 | $1528.00 | 9 | 0.05 |
-| opportunist | 6 | 49.0 | $1192.11 | $1008.00 | 14 | 0.04 |
+| dove | 10 | 1039.5 | $1979.94 | $0.00 | 244 | 0.53 |
+| scout | 8 | 490.5 | $1593.20 | $0.00 | 136 | 0.31 |
+| bluffer | 4 | 281.0 | $793.23 | $0.00 | 91 | 0.35 |
+| tit_for_tat | 8 | 243.0 | $1588.91 | $0.00 | 77 | 0.15 |
+| hawk | 8 | 93.0 | $1600.00 | $1520.00 | 10 | 0.06 |
+| opportunist | 6 | 49.0 | $1187.11 | $1048.00 | 14 | 0.04 |
 
 ## Health of the game
 
-- Total spent: **$7953.29** — rent $5329.29, burned $2552.00 (**burn ratio 32 %**)
-- Wars declared per day: **3.6**
-- Places handed to the cooperators' queue after a burn: **26**
-- Credits bought: **$8000.00** (200 refuels) — vacant place-nights: **623** of 900
-- Identities: **40** (0 arrived after day 1) — **0 humans gave up**, 40 still playing on the last night
-- Occupancy: **31 %** of place-nights held
+- Total spent: **$8742.39** — rent $6094.39, burned $2568.00 (**burn ratio 29 %**)
+- Wars declared per day: **3.7**
+- Places handed to the cooperators' queue after a burn: **104**
+- Credits bought: **$8800.00** (220 refuels) — vacant place-nights: **594** of 900
+- Identities: **44** (0 arrived after day 1) — **0 humans gave up**, 44 still playing on the last night
+- Occupancy: **34 %** of place-nights held
+
+## What was said, and what it changed
+
+- Announcements: **1380** (15.3 per night)
+- Moves dropped or moved because someone credible promised a war: **115** (1.3 per night)
+
+| Strategy | Said | Kept | Betrayed | Bluffed | Ghosted | Truthfulness |
+|---|---|---|---|---|---|---|
+| dove | 478 | 381 | 0 | 0 | 97 | 80 % |
+| tit_for_tat | 438 | 438 | 0 | 0 | 0 | 100 % |
+| bluffer | 264 | 0 | 0 | 264 | 0 | 0 % |
+| hawk | 200 | 200 | 0 | 0 | 0 | 100 % |
 
 ## The hill on the last night
 
@@ -40,20 +53,23 @@
 
 | # | Account | Strategy | Points |
 |---|---|---|---|
-| 1 | tit_for_tat-7 | tit_for_tat | 35.0 |
-| 2 | tit_for_tat-8 | tit_for_tat | 5.0 |
-| 3 | dove-1 | dove | 0.0 |
-| 4 | dove-2 | dove | 0.0 |
-| 5 | dove-3 | dove | 0.0 |
-| 6 | dove-4 | dove | 0.0 |
-| 7 | dove-5 | dove | 0.0 |
-| 8 | dove-6 | dove | 0.0 |
-| 9 | dove-7 | dove | 0.0 |
-| 10 | dove-8 | dove | 0.0 |
+| 1 | tit_for_tat-7 | tit_for_tat | 20.0 |
+| 2 | dove-8 | dove | 15.0 |
+| 3 | dove-10 | dove | 15.0 |
+| 4 | tit_for_tat-4 | tit_for_tat | 10.0 |
+| 5 | dove-1 | dove | 0.0 |
+| 6 | dove-2 | dove | 0.0 |
+| 7 | dove-3 | dove | 0.0 |
+| 8 | dove-4 | dove | 0.0 |
+| 9 | dove-5 | dove | 0.0 |
+| 10 | dove-6 | dove | 0.0 |
 
 ## The Wall (30-day real money)
 
 | # | Account | Strategy | Spent |
 |---|---|---|---|
-| 1 | tit_for_tat-7 | tit_for_tat | $17.24 |
-| 2 | tit_for_tat-8 | tit_for_tat | $3.00 |
+| 1 | tit_for_tat-7 | tit_for_tat | $19.42 |
+| 2 | dove-10 | dove | $18.45 |
+| 3 | scout-1 | scout | $18.00 |
+| 4 | tit_for_tat-8 | tit_for_tat | $18.00 |
+| 5 | dove-9 | dove | $15.00 |

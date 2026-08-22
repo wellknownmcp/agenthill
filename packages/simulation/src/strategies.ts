@@ -5,8 +5,9 @@
  * lives HERE — the engine never sees it.
  */
 import type { DayState, MoveInput, SlotResolution } from "@agenthill/engine";
+import type { SimAnnouncement } from "./announce";
 
-export type StrategyName = "dove" | "hawk" | "tit_for_tat" | "scout" | "opportunist";
+export type StrategyName = "dove" | "hawk" | "tit_for_tat" | "scout" | "opportunist" | "bluffer";
 
 export interface PublicDay {
   day: number;
@@ -16,6 +17,7 @@ export interface PublicDay {
 export interface AgentView {
   accountId: string;
   agentId: string;
+  strategy: StrategyName;
   day: number;
   state: DayState;
   history: PublicDay[];
@@ -24,6 +26,10 @@ export interface AgentView {
   queueRank: number;
   reputation: number;
   rentIfHolding: (slot: number) => number;
+  /** Today's public announcements — everybody's, mine included. Empty when the channel is off. */
+  announcements: SimAnnouncement[];
+  /** What an account's word has been worth lately, in [0, 1]. */
+  believe: (accountId: string) => number;
   rnd: () => number;
 }
 
@@ -121,4 +127,135 @@ export const opportunist: Strategy = (v) => {
   return dove(v);
 };
 
-export const STRATEGIES: Record<StrategyName, Strategy> = { dove, hawk, tit_for_tat: titForTat, scout, opportunist };
+/**
+ * Bluffer: never wars, and says it will. Announces WAR on an established place,
+ * then deposits a PEACE on that same place — verdict `bluffed`, every time.
+ *
+ * It exists to answer one question the balancing could not answer by argument:
+ * is the announcement channel exploitable? Note what it costs to find out — a
+ * challenger's PEACE is the floor, so a bluff is 3 $ a night, and it pays the
+ * moment one holder walks away. Note also what it does NOT cost: this agent
+ * only ever PLAYS peace, so its move-reputation is a perfect 1.0 and it sits at
+ * the top of the cooperators' queue while lying every single day. The record of
+ * words is the only place it can be caught.
+ */
+export const bluffer: Strategy = (v) => {
+  if (v.walletCents < FLOOR) return [];
+  const mine = mySlots(v);
+  if (mine.length > 0 && v.walletCents >= v.rentIfHolding(mine[0]!)) return [peace(v, mine[0]!)];
+  const target = blufferTarget(v);
+  return target === null ? dove(v) : [peace(v, target)];
+};
+
+/**
+ * The place to point at: the one whose holder pays the most, because rent grows
+ * with every night held. That holder is the likeliest to be relieved to leave —
+ * and whoever takes the place next starts again at the floor. Deterministic on
+ * purpose: the target must be identical in the announcing pass and in the
+ * depositing pass, or the agent would announce one place and play another by
+ * accident, which is a bug wearing the costume of a strategy.
+ */
+export function blufferTarget(v: AgentView): number | null {
+  const held = [...Array(10).keys()]
+    .map((i) => i + 1)
+    .filter((s) => (v.state.slots[s - 1]?.occupants.length ?? 0) > 0 && !mySlots(v).includes(s));
+  if (held.length === 0) return null;
+  return held.sort((a, b) => holderRent(v, b) - holderRent(v, a) || a - b)[0]!;
+}
+
+export const STRATEGIES: Record<StrategyName, Strategy> = { dove, hawk, tit_for_tat: titForTat, scout, opportunist, bluffer };
+
+/**
+ * What each strategy SAYS, before anyone has deposited anything.
+ *
+ * Silence is a position too, and two of these take it: announcing where you are
+ * going invites a challenge on exactly that place, so an agent whose whole plan
+ * is to sit somewhere quiet has a reason to say nothing. Returning null is that
+ * choice, not a missing implementation.
+ */
+export type Announcer = (v: AgentView, intent: Omit<MoveInput, "receivedAt">[]) => { slot: number; move: "PEACE" | "WAR" } | null;
+
+const truthfully: Announcer = (_v, intent) => {
+  const m = intent[0];
+  if (!m || m.move === "PASS") return null;
+  return { slot: m.slot, move: m.move as "PEACE" | "WAR" };
+};
+
+export const ANNOUNCERS: Record<StrategyName, Announcer> = {
+  // Nothing to hide, and a kept record is worth having when you live in the queue.
+  dove: truthfully,
+  // Wants the deterrence: a hawk that announces its war and makes it is the
+  // only agent here whose word costs its opponents money.
+  hawk: truthfully,
+  // Legibility IS the strategy — "I strike back" only works when it is known.
+  tit_for_tat: truthfully,
+  // Reads the room, never briefs it: its edge is knowing where the heat is
+  // going before the others, and announcing would give that away.
+  scout: () => null,
+  // Hunts quiet places. Saying so makes them loud.
+  opportunist: () => null,
+  bluffer: (v) => {
+    const target = blufferTarget(v);
+    return target === null ? null : { slot: target, move: "WAR" };
+  },
+};
+
+/**
+ * How much an agent lets someone else's word change its night, in [0, 1],
+ * multiplied by how much that word is currently worth.
+ *
+ * A hawk at 0 is not stubbornness — it is the reason the channel cannot empty
+ * the hill on its own: someone always shows up anyway.
+ */
+export const DETERRABILITY: Record<StrategyName, number> = {
+  dove: 0.9,
+  scout: 0.8,
+  opportunist: 0.7,
+  tit_for_tat: 0.4,
+  bluffer: 0.2,
+  hawk: 0,
+};
+
+/**
+ * The one place where a sentence can change the night.
+ *
+ * A move aimed at a place someone credibly promised to attack is dropped with
+ * probability `deterrability × belief`. A challenger backs off to the calmest
+ * unthreatened place; a HOLDER that backs off loses its place, which is exactly
+ * how a bluff turns into a cheap conquest. A deterred WAR simply never happens
+ * — that is the war count falling, and with it the burn, and with it the
+ * revenue. Whether that is a good trade is what the runs are for.
+ *
+ * `roll` is its own generator, not the agent's: the rolls happen only when the
+ * channel is on, and drawing them from the shared stream would have shifted
+ * every later draw, making the silent run and the talking run two different
+ * worlds instead of the same world with one difference.
+ */
+export function afterReadingTheRoom(v: AgentView, moves: Omit<MoveInput, "receivedAt">[], roll: () => number): Omit<MoveInput, "receivedAt">[] {
+  if (v.announcements.length === 0 || moves.length === 0) return moves;
+  const threat = (slot: number): number => {
+    let worst = 0;
+    for (const a of v.announcements) {
+      if (a.slot !== slot || a.move !== "WAR" || a.accountId === v.accountId) continue;
+      const b = v.believe(a.accountId);
+      if (b > worst) worst = b;
+    }
+    return worst;
+  };
+  const out: Omit<MoveInput, "receivedAt">[] = [];
+  for (const m of moves) {
+    const t = threat(m.slot);
+    if (t === 0 || roll() >= DETERRABILITY[v.strategy] * t) {
+      out.push(m);
+      continue;
+    }
+    if (m.move === "PEACE") {
+      const alt = [...Array(10).keys()]
+        .map((i) => i + 1)
+        .filter((s) => s !== m.slot && threat(s) === 0)
+        .sort((a, b) => warsOn(v, a, 3) - warsOn(v, b, 3) || a - b)[0];
+      if (alt !== undefined) out.push({ ...m, slot: alt });
+    }
+  }
+  return out;
+}

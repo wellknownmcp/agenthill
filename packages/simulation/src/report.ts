@@ -17,6 +17,16 @@ export function markdownReport(r: SimResult, title: string): string {
   lines.push(`- Credits bought: **${usd(r.totals.purchasedCents)}** (${r.totals.refuels} refuels) — vacant place-nights: **${r.totals.vacantSlotNights}** of ${r.days * 10}`);
   lines.push(`- Identities: **${r.totals.identities}** (${r.totals.arrived} arrived after day 1) — **${r.totals.quits} humans gave up**, ${r.totals.activeAtEnd} still playing on the last night`);
   lines.push(`- Occupancy: **${(100 - (r.totals.vacantSlotNights / (r.days * 10)) * 100).toFixed(0)} %** of place-nights held`);
+  if (r.totals.announced > 0) {
+    lines.push("", "## What was said, and what it changed", "");
+    lines.push(`- Announcements: **${r.totals.announced}** (${(r.totals.announced / r.days).toFixed(1)} per night)`);
+    lines.push(`- Moves dropped or moved because someone credible promised a war: **${r.totals.deterred}** (${(r.totals.deterred / r.days).toFixed(1)} per night)`);
+    lines.push("", "| Strategy | Said | Kept | Betrayed | Bluffed | Ghosted | Truthfulness |", "|---|---|---|---|---|---|---|");
+    for (const s of [...r.byStrategy].sort((a, b) => b.announced - a.announced)) {
+      if (s.announced === 0) continue;
+      lines.push(`| ${s.strategy} | ${s.announced} | ${s.kept} | ${s.betrayed} | ${s.bluffed} | ${s.ghosted} | ${((s.kept / s.announced) * 100).toFixed(0)} % |`);
+    }
+  }
   lines.push("", "## The hill on the last night", "", "| Place | Held by | Days held |", "|---|---|---|");
   r.finalState.slots.forEach((s, i) => {
     lines.push(`| ${i + 1} | ${s.occupants.map((o) => `${o.accountId}`).join(" · ") || "— vacant —"} | ${s.occupants.map((o) => o.daysHeld).join(" · ")} |`);
