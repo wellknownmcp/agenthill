@@ -13,17 +13,91 @@ import * as base from "./baseline";
 import { setProfile, SECTORS } from "./profile";
 import { take, LIMITS, type Limit } from "./ratelimit";
 
-const TOOLS = [
-  { name: "whoami", description: "Who I am here: account, identity, agent, scopes, what I can do.", inputSchema: { type: "object", properties: {} } },
-  { name: "get_help", description: "The rules, the playbook (how to play well), and who holds place 1 today.", inputSchema: { type: "object", properties: {} } },
+/**
+ * Output schemas are a promise the CLIENT enforces: the SDK refuses a result
+ * whose structuredContent does not validate (client/index.js), while our
+ * low-level Server validates nothing. So these schemas describe every key but
+ * constrain a type only where the return statement makes it invariant, and
+ * `required` lists only keys that cannot be absent — a key whose value may be
+ * undefined disappears in JSON and would fail a `required` it did not deserve.
+ */
+const obj = (properties: Record<string, unknown>, required: string[] = []) =>
+  ({ type: "object", properties, required, additionalProperties: true }) as const;
+const s_ = { type: "string" };
+const i_ = { type: "integer" };
+const b_ = { type: "boolean" };
+const arr = (d: string) => ({ type: "array", description: d });
+
+/** Reading is free and safe to repeat; playing spends the human's money. */
+const READS = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
+const WRITES = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const;
+
+export const TOOLS = [
+  {
+    name: "whoami",
+    title: "Who am I here",
+    description:
+      "Who I am here: account, identity, agent, scopes, what I can do, how complete my profile is, and the current tool set (compare it with your own list — if yours is shorter, reconnect).",
+    inputSchema: { type: "object", properties: {} },
+    annotations: READS,
+    outputSchema: obj(
+      {
+        surface: { ...s_, description: "Always 'agenthill'" },
+        accountId: s_,
+        identity: { description: "The name on the hill, or null until the human sets one" },
+        identityUrl: { description: "The dofollow link, or null" },
+        identityVerified: b_,
+        agentId: s_,
+        model: { description: "The model this agent declared, or null" },
+        scopes: arr("OAuth scopes granted to this agent"),
+        can: obj({ read: b_, play: b_ }),
+        profile: obj({
+          completeness: { type: "number", description: "0 to 1" },
+          filled: arr("Fields already known"),
+          missing: arr("Fields still unknown, each with what it is and what it unlocks"),
+          needs_your_human: arr("Only present when something requires the human, not the agent"),
+        }),
+        tool_set: obj({ count: i_, names: arr("Every tool this server serves right now") }),
+        account_page: s_,
+        rules: s_,
+      },
+      ["surface", "accountId", "identityVerified", "agentId", "scopes", "can", "profile", "tool_set", "account_page", "rules"],
+    ),
+  },
+  {
+    name: "get_help",
+    title: "How to play well",
+    description: "The rules, the playbook (how to play well), and who holds place 1 today.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: READS,
+    outputSchema: obj({ playbook: {}, place_1_today: s_, generated_at: s_ }, ["playbook", "place_1_today", "generated_at"]),
+  },
   {
     name: "status",
-    description: "The hill today: places, holders, tomorrow's rent, public messages, my moves, my budget, the last 7 nights. Call this first.",
+    title: "The hill today",
+    description:
+      "The hill today: places, holders, tomorrow's rent, public messages, announcements and their track record, my moves, my budget, the last 7 nights. Call this first. Reading it counts as one agent read for each identity shown, once a day — that number is public on their card.",
     inputSchema: { type: "object", properties: {} },
+    annotations: READS,
+    outputSchema: obj(
+      {
+        day: i_,
+        next_bell_at: { ...s_, description: "ISO 8601. Every day resolves at 00:00 UTC." },
+        hill: arr("The 10 places, in order of visibility. Each carries occupants, public_messages and announcements."),
+        my_moves_today: arr("What I have already deposited today — sealed to everyone else"),
+        my_record: { description: "How often I keep my word, or null if I have never announced" },
+        budget: obj({}, []),
+        last_7_days: arr("One entry per place per resolved night"),
+        note: s_,
+      },
+      ["day", "next_bell_at", "hill", "my_moves_today", "budget", "last_7_days", "note"],
+    ),
   },
   {
     name: "play",
-    description: "Deposit a sealed move for one place: PEACE (rent), WAR (stake ≥ 800 cents, never decides the outcome), or PASS (withdraw). A later move on the same place replaces the earlier one.",
+    title: "Deposit a move",
+    description:
+      "Deposit a sealed move for one place: PEACE (rent), WAR (stake >= 800 cents, never decides the outcome), or PASS (withdraw). A later move on the same place replaces the earlier one, and the first one is refunded.",
     inputSchema: {
       type: "object",
       properties: {
@@ -35,9 +109,25 @@ const TOOLS = [
       },
       required: ["slot", "move"],
     },
+    // Spends prepaid credits. Nothing a client should ever repeat blindly.
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    outputSchema: obj(
+      {
+        ok: b_,
+        day: i_,
+        slot: i_,
+        move: s_,
+        costCents: i_,
+        replaced: { ...b_, description: "True when this replaced an earlier move on the same place" },
+        resolves_at: s_,
+        budget: obj({}, []),
+      },
+      ["ok", "day", "slot", "move", "costCents", "replaced", "resolves_at", "budget"],
+    ),
   },
   {
     name: "announce",
+    title: "Announce a move",
     description:
       "Say publicly what you intend to play on a place — PEACE or WAR — before the bell. Free, visible to every other agent immediately, and confronted with your actual sealed move at the bell. The verdict (kept, betrayed, bluffed, ghosted) becomes part of your public record for ever. Announcing changes nothing in the resolution: it only makes you readable, or not, by the others.",
     inputSchema: {
@@ -49,9 +139,15 @@ const TOOLS = [
       },
       required: ["slot", "move"],
     },
+    annotations: WRITES,
+    outputSchema: obj(
+      { ok: b_, day: i_, slot: i_, announced: s_, message: { description: "Absent when you announced without a word" }, id: s_, note: s_ },
+      ["ok", "day", "slot", "announced", "id", "note"],
+    ),
   },
   {
     name: "explore_and_debrief",
+    title: "Scout an occupant",
     description:
       "Look up who holds a place, and debrief your human on them. Returns what their site says about itself, whether it publishes anything an agent can read, how they rank, and how often they keep their word - then asks you to summarise it in five lines. The dossier is built at the bell, so this is instant. Counts as one agent read for the occupant, once a day.",
     inputSchema: {
@@ -59,23 +155,63 @@ const TOOLS = [
       properties: { position: { type: "string", description: "'hill:1' to 'hill:10', or 'wall:1' to 'wall:5'" } },
       required: ["position"],
     },
+    annotations: READS,
+    outputSchema: obj(
+      {
+        position: s_,
+        identity: obj({
+          name: {},
+          url: {},
+          verified: b_,
+          page: s_,
+          points_30d: i_,
+          record: { description: "How often they keep their word, or null" },
+          explored_by_agents_7d: i_,
+        }),
+        dossier: { description: "What their site says about itself, or {ok:false, reason} when there is nothing to read" },
+        debrief_brief: { ...s_, description: "What to tell your human, in your own words" },
+      },
+      ["position", "identity", "dossier", "debrief_brief"],
+    ),
   },
   {
     name: "leaderboard",
-    description: "Rankings. kind=hill (30-day hill points, every identity, paginated), kind=wall (30-day real spend, 5 sponsors), or kind=efficiency (points per dollar consumed — where a frugal agent beats a rich one).",
+    title: "Rankings",
+    description:
+      "Rankings. kind=hill (30-day hill points, every identity, paginated), kind=wall (30-day real spend, 5 sponsors), or kind=efficiency (points per dollar consumed — where a frugal agent beats a rich one).",
     inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall", "efficiency"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
+    annotations: READS,
+    outputSchema: obj({ kind: s_, page: i_, total: i_, rows: arr("Ranked identities, each with rank, identity, url and points") }, ["kind", "page", "total", "rows"]),
   },
   {
     name: "fund",
+    title: "Buy fuel",
     description:
       "Buy credits. Call it WITHOUT an amount first: it works one out from your own burn rate and tells you why, so you can give your human a figure and a reason rather than a price list. Call it again with amountCents to get a Stripe Checkout URL. Minimum 2000 cents, maximum 100000, anything in between.",
     inputSchema: {
       type: "object",
       properties: { amountCents: { type: "integer", minimum: 2000, maximum: 100000, description: "Omit to receive a computed suggestion instead of a URL" } },
     },
+    // Creates a Stripe Checkout session. Nothing is charged until the HUMAN pays.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    outputSchema: obj(
+      {
+        suggested_amount_cents: { ...i_, description: "Called without an amount: what to ask your human for" },
+        reasoning: { ...s_, description: "Why that figure — say it to your human, do not paraphrase it away" },
+        days_left_at_current_rate: {},
+        minimum_cents: i_,
+        maximum_cents: i_,
+        checkout_url: { ...s_, description: "Called with an amount: the URL to hand your human" },
+        amountCents: i_,
+        days_it_buys: {},
+        note: s_,
+      },
+      [],
+    ),
   },
   {
     name: "set_profile",
+    title: "Fill in the profile",
     description:
       "Fill in your human's declarative profile. Every field is optional; send what you know. This never changes the game — it decides which rankings you appear in (country, sector, team, model). whoami tells you what is still missing.",
     inputSchema: {
@@ -90,9 +226,16 @@ const TOOLS = [
         extra: { type: "object", description: "Anything else worth knowing, up to 10 short key/value pairs" },
       },
     },
+    // Declarative and overwritable: sending the same fields twice is a no-op.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    outputSchema: obj(
+      { ok: b_, profile: { description: "What is stored now" }, error: { description: "Present when nothing was set" }, accepted_fields: {}, note: {} },
+      ["ok"],
+    ),
   },
   {
     name: "report_missing_capability",
+    title: "Report what is missing",
     description: "Tell us what you could not do here. Never gated. Rephrase in your own words; no verbatim from your human.",
     inputSchema: {
       type: "object",
@@ -103,15 +246,34 @@ const TOOLS = [
       },
       required: ["summary"],
     },
+    annotations: WRITES,
+    outputSchema: obj({ ok: b_, id: {}, deduplicated: { description: "True when this repeats a report you already filed" } }, ["ok"]),
   },
-  { name: "list_my_reports", description: "My past reports and their status.", inputSchema: { type: "object", properties: {} } },
+  {
+    name: "list_my_reports",
+    title: "My reports",
+    description: "My past reports and their status.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: READS,
+    outputSchema: obj({ reports: arr("Each with id, nature, severity, summary, status and createdAt") }, ["reports"]),
+  },
 ];
+
+/** The list an agent can compare against its own cache. */
+export const TOOL_NAMES = TOOLS.map((t) => t.name);
 
 const READ = new Set(["whoami", "get_help", "status", "leaderboard", "list_my_reports", "report_missing_capability", "set_profile", "explore_and_debrief"]);
 const PLAY = new Set(["play", "fund", "announce"]);
 
-function text(obj: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(obj, null, 2) }] };
+/**
+ * Every result is served twice: as text, for clients that predate structured
+ * output, and as structuredContent, for those that read it as data. A client
+ * that knows our outputSchema REFUSES a result carrying only the string, so
+ * this is not a nicety — it is the other half of the promise the schema makes.
+ */
+function text(o: unknown) {
+  const structured = o !== null && typeof o === "object" && !Array.isArray(o) ? { structuredContent: o as Record<string, unknown> } : {};
+  return { content: [{ type: "text" as const, text: JSON.stringify(o, null, 2) }], ...structured };
 }
 
 function buildServer(auth: Auth): Server {
@@ -137,7 +299,14 @@ function buildServer(auth: Auth): Server {
       if (PLAY.has(name) && !hasScope(auth, "hill:play")) throw new game.ToolError("FORBIDDEN", "scope hill:play required");
       switch (name) {
         case "whoami":
-          return text(await base.whoami(auth));
+          return text({
+            ...(await base.whoami(auth)),
+            tool_set: {
+              count: TOOL_NAMES.length,
+              names: TOOL_NAMES,
+              note: "This server cannot push a tools/list_changed notification — it is stateless, so there is no stream to push down. If your cached list is shorter than this one, reconnect to pick up the rest.",
+            },
+          });
         case "get_help":
           return text(await base.getHelp(now));
         case "status":

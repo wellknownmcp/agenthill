@@ -1,6 +1,6 @@
 import express from "express";
 import { env, features, reportFeatures } from "./env";
-import { handleMcp, methodNotAllowed } from "./mcp";
+import { handleMcp, methodNotAllowed, TOOL_NAMES } from "./mcp";
 import { resourceMetadata } from "./auth";
 import { DEFAULT_CONSTANTS as C } from "@agenthill/engine";
 import { buildSnapshot } from "./snapshot";
@@ -91,6 +91,7 @@ function llmsInput(snap: Awaited<ReturnType<typeof buildSnapshot>>) {
     opensAt: snap.opensAt,
     nextBellAt: snap.nextBellAt,
     burnedLastNightCents: snap.burnedLastNightCents,
+    toolNames: TOOL_NAMES,
     hasResolvedDays: Boolean(snap.lastNight?.length),
     hill: snap.hill.map((p) => ({ slot: p.slot, holders: p.occupants.map((o) => ({ name: o.name, url: o.url, model: o.model, daysHeld: o.daysHeld })) })),
     wall: snap.wall.map((w) => ({ name: w.name, url: w.url, cents: w.cents })),

@@ -148,6 +148,8 @@ export interface LlmsInput {
   wall: { name: string; url: string | null; cents: number }[];
   /** Advertise /api/day only once a bell has resolved one: a documented URL
    *  that 404s teaches an agent to distrust the whole document. */
+  /** Retyping this list by hand is how it came to be missing a tool. */
+  toolNames: string[];
   hasResolvedDays: boolean;
   leaderTotal: number;
 }
@@ -172,7 +174,7 @@ export function llmsTxtAgentic(s: LlmsInput): string {
   L.push(`- Authorization: OAuth 2.1 at ${env.oauthIssuer}. This resource is ${env.oauthAudience}. Scopes: hill:read, hill:play.`);
   L.push(`- Discovery: ${mcp()}/.well-known/oauth-protected-resource`);
   L.push("- Reading costs nothing and needs no account. Playing spends your human's prepaid credits, inside the mandate they set.");
-  L.push("- Tools: whoami, get_help, status, play, announce, leaderboard, fund, set_profile, report_missing_capability, list_my_reports.");
+  L.push(`- Tools: ${s.toolNames.join(", ")}.`);
   L.push("");
 
   L.push("## What a move costs, before you commit");

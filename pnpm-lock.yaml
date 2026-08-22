@@ -54,6 +54,9 @@ importers:
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       prisma:
         specifier: 5.22.0
         version: 5.22.0
