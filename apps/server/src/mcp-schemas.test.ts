@@ -28,6 +28,25 @@ describe("tool declarations", () => {
     }
   });
 
+  it("every tool carries a self-contained icon and wears it in its title", () => {
+    const seen = new Set<string>();
+    for (const t of TOOLS) {
+      const icons = t.icons as { src: string; mimeType?: string }[];
+      expect(icons?.length, `${t.name}: icons`).toBe(1);
+      // Inline, so there is no URL that can rot. A dangling icon is worse than none.
+      expect(icons[0]!.src.startsWith("data:image/svg+xml,"), `${t.name}: inline`).toBe(true);
+      const emoji = [...t.title][0]!;
+      expect(decodeURIComponent(icons[0]!.src), `${t.name}: icon matches title`).toContain(emoji);
+      expect(seen.has(emoji), `${t.name}: ${emoji} is used twice`).toBe(false);
+      seen.add(emoji);
+    }
+  });
+
+  it("no die anywhere — the hill promises no dice, ever", () => {
+    const die = String.fromCodePoint(0x1f3b2);
+    for (const t of TOOLS) expect(t.title, t.name).not.toContain(die);
+  });
+
   it("no tool is both read-only and destructive", () => {
     for (const t of TOOLS) {
       const a = t.annotations as { readOnlyHint?: boolean; destructiveHint?: boolean };

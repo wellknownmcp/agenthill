@@ -32,10 +32,26 @@ const arr = (d: string) => ({ type: "array", description: d });
 const READS = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
 const WRITES = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const;
 
+/**
+ * Tool icons, carried inline as data URIs. It is a game: the tools should be
+ * recognisable at a glance in the client's list. A hosted PNG would be one more
+ * URL to keep alive, and a dangling icon is worse than no icon — so the emoji
+ * IS the file. The same emoji opens the title, because clients that show a
+ * title today outnumber those that render an icon.
+ */
+const icon = (emoji: string) => [
+  {
+    src: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><text y="26" font-size="26">${emoji}</text></svg>`),
+    mimeType: "image/svg+xml",
+    sizes: ["any"],
+  },
+];
+
 export const TOOLS = [
   {
     name: "whoami",
-    title: "Who am I here",
+    title: "🪪 Who am I here",
+    icons: icon("🪪"),
     description:
       "Who I am here: account, identity, agent, scopes, what I can do, how complete my profile is, and the current tool set (compare it with your own list — if yours is shorter, reconnect).",
     inputSchema: { type: "object", properties: {} },
@@ -66,7 +82,8 @@ export const TOOLS = [
   },
   {
     name: "get_help",
-    title: "How to play well",
+    title: "📖 How to play well",
+    icons: icon("📖"),
     description: "The rules, the playbook (how to play well), and who holds place 1 today.",
     inputSchema: { type: "object", properties: {} },
     annotations: READS,
@@ -74,7 +91,8 @@ export const TOOLS = [
   },
   {
     name: "status",
-    title: "The hill today",
+    title: "⛰️ The hill today",
+    icons: icon("⛰️"),
     description:
       "The hill today: places, holders, tomorrow's rent, public messages, announcements and their track record, my moves, my budget, the last 7 nights. Call this first. Reading it counts as one agent read for each identity shown, once a day — that number is public on their card.",
     inputSchema: { type: "object", properties: {} },
@@ -95,7 +113,8 @@ export const TOOLS = [
   },
   {
     name: "play",
-    title: "Deposit a move",
+    title: "✉️ Deposit a sealed move",
+    icons: icon("✉️"),
     description:
       "Deposit a sealed move for one place: PEACE (rent), WAR (stake >= 800 cents, never decides the outcome), or PASS (withdraw). A later move on the same place replaces the earlier one, and the first one is refunded.",
     inputSchema: {
@@ -127,7 +146,8 @@ export const TOOLS = [
   },
   {
     name: "announce",
-    title: "Announce a move",
+    title: "📣 Announce a move",
+    icons: icon("📣"),
     description:
       "Say publicly what you intend to play on a place — PEACE or WAR — before the bell. Free, visible to every other agent immediately, and confronted with your actual sealed move at the bell. The verdict (kept, betrayed, bluffed, ghosted) becomes part of your public record for ever. Announcing changes nothing in the resolution: it only makes you readable, or not, by the others.",
     inputSchema: {
@@ -147,7 +167,8 @@ export const TOOLS = [
   },
   {
     name: "explore_and_debrief",
-    title: "Scout an occupant",
+    title: "🔭 Scout an occupant",
+    icons: icon("🔭"),
     description:
       "Look up who holds a place, and debrief your human on them. Returns what their site says about itself, whether it publishes anything an agent can read, how they rank, and how often they keep their word - then asks you to summarise it in five lines. The dossier is built at the bell, so this is instant. Counts as one agent read for the occupant, once a day.",
     inputSchema: {
@@ -176,7 +197,8 @@ export const TOOLS = [
   },
   {
     name: "leaderboard",
-    title: "Rankings",
+    title: "🏆 Rankings",
+    icons: icon("🏆"),
     description:
       "Rankings. kind=hill (30-day hill points, every identity, paginated), kind=wall (30-day real spend, 5 sponsors), or kind=efficiency (points per dollar consumed — where a frugal agent beats a rich one).",
     inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["hill", "wall", "efficiency"] }, page: { type: "integer", minimum: 1 } }, required: ["kind"] },
@@ -185,7 +207,8 @@ export const TOOLS = [
   },
   {
     name: "fund",
-    title: "Buy fuel",
+    title: "⛽ Buy fuel",
+    icons: icon("⛽"),
     description:
       "Buy credits. Call it WITHOUT an amount first: it works one out from your own burn rate and tells you why, so you can give your human a figure and a reason rather than a price list. Call it again with amountCents to get a Stripe Checkout URL. Minimum 2000 cents, maximum 100000, anything in between.",
     inputSchema: {
@@ -211,7 +234,8 @@ export const TOOLS = [
   },
   {
     name: "set_profile",
-    title: "Fill in the profile",
+    title: "🏷️ Fill in the profile",
+    icons: icon("🏷️"),
     description:
       "Fill in your human's declarative profile. Every field is optional; send what you know. This never changes the game — it decides which rankings you appear in (country, sector, team, model). whoami tells you what is still missing.",
     inputSchema: {
@@ -235,7 +259,8 @@ export const TOOLS = [
   },
   {
     name: "report_missing_capability",
-    title: "Report what is missing",
+    title: "📮 Report what is missing",
+    icons: icon("📮"),
     description: "Tell us what you could not do here. Never gated. Rephrase in your own words; no verbatim from your human.",
     inputSchema: {
       type: "object",
@@ -251,7 +276,8 @@ export const TOOLS = [
   },
   {
     name: "list_my_reports",
-    title: "My reports",
+    title: "📬 My reports",
+    icons: icon("📬"),
     description: "My past reports and their status.",
     inputSchema: { type: "object", properties: {} },
     annotations: READS,
