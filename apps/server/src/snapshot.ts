@@ -47,7 +47,7 @@ export async function identities(ids: string[]): Promise<Map<string, IdentityVie
   return map;
 }
 
-export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
+async function computeSnapshot(now: Date): Promise<DaySnapshot> {
   const day = dayIndex(now, env.launchDate);
   const state = await loadState(day);
   const [resolutions, ledger, points, accounts, messages, agents] = await Promise.all([
@@ -111,4 +111,43 @@ export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
     leaderboardTotal: board.length,
     efficiency: eff.slice(0, 20).map((e) => ({ ...view(e.accountId), points: e.points, spentCents: e.spentCents, pointsPerDollar: e.pointsPerDollar })),
   };
+}
+
+/**
+ * The snapshot costs seven queries and every surface wants it: the page, the
+ * API, llms.txt, and every `status` an agent calls. Rebuilding it per request
+ * turns a hundred polling agents into seven hundred queries a second against a
+ * database shared with twenty other applications.
+ *
+ * So it is cached in process for a few seconds. The state only changes at the
+ * bell and when a message is posted, so a short window costs nothing in
+ * freshness — and `generatedAt` still says exactly when it was taken, so a
+ * reader can tell.
+ *
+ * One flight at a time: a burst of concurrent requests on a cold cache awaits
+ * the same promise instead of each starting its own seven queries. That is the
+ * part that matters under load — a stampede is what actually falls over.
+ */
+const TTL_MS = 5_000;
+let cached: { at: number; snap: DaySnapshot } | null = null;
+let inFlight: Promise<DaySnapshot> | null = null;
+
+export async function buildSnapshot(now: Date): Promise<DaySnapshot> {
+  const t = now.getTime();
+  if (cached && t - cached.at < TTL_MS) return cached.snap;
+  if (inFlight) return inFlight;
+  inFlight = computeSnapshot(now)
+    .then((snap) => {
+      cached = { at: t, snap };
+      return snap;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
+
+/** The bell must publish immediately, not up to five seconds later. */
+export function invalidateSnapshot(): void {
+  cached = null;
 }

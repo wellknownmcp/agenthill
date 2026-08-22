@@ -9,7 +9,7 @@ import { env, features } from "./env";
 import { C, activeMoves, loadState } from "./state";
 import { dayIndex, nextBellAt } from "./day";
 import { wallet, dailyBurn, daysSurvivable } from "./wallet";
-import { buildSnapshot } from "./snapshot";
+import { buildSnapshot, invalidateSnapshot } from "./snapshot";
 import { createCheckout, WaiverRequired } from "./stripe";
 import { seen, visitorHash } from "./metrics";
 import { announce as recordAnnouncement, forDay, truthfulness } from "./announce";
@@ -115,6 +115,7 @@ export async function play(auth: Auth, args: { slot: number; move: "PEACE" | "WA
     if (args.model) await tx.agent.update({ where: { id: auth.agentId }, data: { model: normalizeText(args.model, 60) } });
   });
 
+  invalidateSnapshot(); // a public message on a place is visible at once
   return {
     ok: true,
     day,

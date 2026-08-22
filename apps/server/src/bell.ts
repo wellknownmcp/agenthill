@@ -8,6 +8,7 @@ import { prisma } from "./db";
 import { C, accountInfos, activeMoves, loadState } from "./state";
 import { settleDay } from "./announce";
 import { refreshDossiers } from "./dossiers";
+import { invalidateSnapshot } from "./snapshot";
 
 export interface BellResult {
   day: number;
@@ -65,6 +66,8 @@ export async function ringBell(day: number, now: Date): Promise<BellResult> {
     await settleDay(day, moves.map((m) => ({ accountId: m.accountId, slot: m.slot, move: m.move })), tx as never);
     await tx.move.updateMany({ where: { day, status: "active" }, data: { status: "resolved" } });
   });
+
+  invalidateSnapshot(); // the night just changed everything; publish it now
 
   // Rebuild the dossiers of whoever now stands on the hill. AFTER the state is
   // committed: a failure out here must never cost us a resolved day.
